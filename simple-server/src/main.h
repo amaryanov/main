@@ -19,7 +19,7 @@
 #include <sys/epoll.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
-#include <sys/types.h>
+#include <sys/time.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -39,4 +39,7 @@ static struct epoll_event* events;
 static struct sockaddr_in my_addr;
 static struct epoll_event epoll_event;
 pthread_mutex_t epoll_wait_mutex;
+
+void (*sigset(int sig, void (*disp)(int)))(int);//without it gcc wil complain
+
 #endif /* _MAIN_H_INCLUDED_ */

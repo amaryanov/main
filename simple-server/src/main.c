@@ -535,9 +535,6 @@ static void startServer()
 int main(void)
 {
 
-	/** дескрипторы */
-	int count_fds = 0;
-
 	/** адреса */
 	struct sockaddr_in their_addr;
 	socklen_t addrlen = sizeof(struct sockaddr_in);
