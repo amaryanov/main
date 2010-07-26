@@ -1,0 +1,149 @@
+#!/bin/bash
+
+scriptpath=$(readlink -f $0)
+scriptdir=`dirname $scriptpath`
+
+#what to build
+nginxbuild=1
+phpbuild=1
+mysqlbuild=1
+
+topdir=$PWD
+srcdir=$topdir/src/
+builddir=$topdir/build/
+
+nginxver="0.7.67"
+phpver="5.2.13"
+eaccver="0.9.6.1"
+phpfpmver="0.5.14"
+zlibver="1.2.5"
+opsslver="1.0.0a"
+pcrever="8.10"
+mysqlver="5.1"
+mysqlsubver="48"
+
+mkdir -p $srcdir
+mkdir -p $builddir
+
+cd $srcdir
+
+#nginx
+if [ "$nginxbuild" -eq "1" ]
+then
+	if [ -e "nginx-${nginxver}" ]
+	then
+		echo "${srcdir}nginx-${nginxver} already exist"
+		exit 1
+	elif [ -e "${builddir}nginx-${nginxver}" ]
+	then
+		echo "${builddir}nginx-${nginxver} already exist"
+		exit 1
+	fi
+	wget -c http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz
+	wget -c http://www.openssl.org/source/openssl-${opsslver}.tar.gz
+	wget -c http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz
+	wget -c http://zlib.net/zlib-${zlibver}.tar.gz
+	tar -xzf zlib-${zlibver}.tar.gz
+	tar -xzf nginx-${nginxver}.tar.gz
+	tar -xzf openssl-${opsslver}.tar.gz
+	tar -xzf pcre-${pcrever}.tar.gz
+	cd nginx-${nginxver}/
+	./configure --prefix=${builddir}nginx-${nginxver} \
+		--without-poll_module \
+		--without-select_module \
+		--with-http_ssl_module \
+		--without-http_ssi_module \
+		--without-http_userid_module \
+		--without-http_autoindex_module \
+		--without-http_geo_module \
+		--without-http_referer_module \
+		--without-mail_pop3_module \
+		--without-mail_imap_module \
+		--without-mail_smtp_module \
+		--with-pcre=${srcdir}/pcre-${pcrever} \
+		--with-zlib=${srcdir}/zlib-${zlibver} \
+		--with-openssl=${srcdir}/openssl-${opsslver}
+	make
+	make install
+	cd ${srcdir}
+fi
+
+#php
+if [ "$phpbuild" -eq "1" ]
+then
+	if [ -n "`autoconf --version | head -n 1 | tr -d '\n' | sed 's/Autoconf version [2-9]\.[1-9][3-9]//'`" ]
+	then
+		echo "Need autoconf version >= 2.13"
+	fi
+	if [ -e "php-${phpver}" ]
+	then
+		echo "${srcdir}php-${phpver} already exist"
+		exit 1
+	elif [ -e "${builddir}php-${phpver}" ]
+	then
+		echo "${builddir}php-${phpver} already exist"
+		exit 1
+	fi
+	wget -c http://ua.php.net/get/php-${phpver}.tar.gz/from/ua2.php.net/mirror
+	wget -c http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2
+	wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz
+	tar -xzf php-${phpver}.tar.gz
+	gzip -fdc php-${phpver}-fpm-${phpfpmver}.diff.gz > php-${phpver}-fpm-${phpfpmver}.diff
+	tar -xjf eaccelerator-${eaccver}.tar.bz2
+	cd php-${phpver}
+	patch -p1 < ${srcdir}/php-${phpver}-fpm-${phpfpmver}.diff
+	cp -r ${srcdir}/eaccelerator-${eaccver} ext/eaccelerator
+	./buildconf --force
+	./configure --prefix=${builddir}php-${phpver} \
+		--enable-fastcgi \
+		--enable-fpm --disable-all \
+		--enable-eaccelerator \
+		--with-pcre-regex
+	make
+	make test
+	make install
+	cd ${srcdir}
+fi
+
+#mysql
+if [ "$mysqlbuild" -eq "1" ]
+then
+	if [ -e "mysql-${mysqlver}.${mysqlsubver}" ]
+	then
+		echo "${srcdir}mysql-${mysqlver}.${mysqlsubver} already exist"
+		exit 1
+	elif [ -e "${builddir}mysql-${mysqlver}.${mysqlsubver}" ]
+	then
+		echo "${builddir}mysql-${mysqlver}.${mysqlsubver} already exist"
+		exit 1
+	fi
+	wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlver}.${mysqlsubver}.tar.gz/from/http://mysql.infocom.ua/
+	tar -xzf mysql-${mysqlver}.${mysqlsubver}.tar.gz
+	export mysqldir=${builddir}mysql-${mysqlver}.${mysqlsubver}/
+	cd  mysql-${mysqlver}.${mysqlsubver}
+	CFLAGS="-O3" \
+		CXX=gcc \
+		CXXFLAGS="-O3 -felide-constructors -fno-exceptions -fno-rtti" \
+		./configure --prefix=${mysqldir} \
+			--with-mysqld-ldflags=-all-static \
+			--enable-assembler \
+			--enable-thread-safe-client \
+			--disable-shared \
+			--disable-static \
+			--with-charset=utf8 \
+			--with-extra-charsets=ascii,cp1251,koi8r,latin1,latin2 \
+			--with-plugins=innobase,myisam,partition,myisammrg \
+			--with-mysqld-user=mysql \
+			--with-unix-socket-path=${mysqldir}/var/mysql.sock
+	make
+	make install
+	mkdir -p ${mysqldir}/etc/
+	mkdir -p ${mysqldir}/tmp/
+	mkdir -p ${mysqldir}/var/data/
+	mkdir -p ${mysqldir}/var/log/
+	mkdir -p ${mysqldir}/var/log/innodb
+	mkdir -p ${mysqldir}/var/innodb/
+	${scriptdir}/conf/mysql.conf.sh > ${mysqldir}/etc/my.cnf
+	${mysqldir}/bin/mysql_install_db --defaults-file=${mysqldir}/etc/my.cnf
+#	chown -R mysql:mysql ${mysqldir}
+fi
