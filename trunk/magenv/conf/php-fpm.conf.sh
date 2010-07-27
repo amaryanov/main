@@ -2,6 +2,10 @@
 
 cat <<EOF
 <?xml version="1.0" ?>
+<!--
+start php-fpm: ${phpdir}sbin/php-fpm start
+stop php-fpm: ${phpdir}sbin/php-fpm stop
+-->
 <configuration>
 
 	All relative paths in this config are relative to php's install prefix
