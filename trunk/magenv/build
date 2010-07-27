@@ -102,6 +102,8 @@ then
 	make
 	make test
 	make install
+	export phpdir=${builddir}php-${phpver}/
+	${scriptdir}/conf/php-fpm.conf.sh > ${phpdir}etc/php-fpm.conf
 	cd ${srcdir}
 fi
 
@@ -145,5 +147,4 @@ then
 	mkdir -p ${mysqldir}/var/innodb/
 	${scriptdir}/conf/mysql.conf.sh > ${mysqldir}/etc/my.cnf
 	${mysqldir}/bin/mysql_install_db --defaults-file=${mysqldir}/etc/my.cnf
-#	chown -R mysql:mysql ${mysqldir}
 fi
