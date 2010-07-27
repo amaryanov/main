@@ -1,12 +1,19 @@
 #!/bin/bash
 
-scriptpath=$(readlink -f $0)
-scriptdir=`dirname $scriptpath`
-
+#####SCRIPT CONFIG#####
 #what to build
 nginxbuild=1
 phpbuild=1
 mysqlbuild=1
+
+#what to configure
+nginxconf=1
+phpconf=1
+mysqlconf=1
+#####END SCRIPT CONFIG#####
+
+scriptpath=$(readlink -f $0)
+scriptdir=`dirname $scriptpath`
 
 topdir=$PWD
 srcdir=$topdir/src/
@@ -65,6 +72,10 @@ then
 		--with-openssl=${srcdir}/openssl-${opsslver}
 	make
 	make install
+	if [ "$nginxconf" -eq "1" ]
+	then
+		#configure main and add configs for magento
+	fi
 	cd ${srcdir}
 fi
 
@@ -102,8 +113,12 @@ then
 	make
 	make test
 	make install
-	export phpdir=${builddir}php-${phpver}/
-	${scriptdir}/conf/php-fpm.conf.sh > ${phpdir}etc/php-fpm.conf
+	if [ "$phpconf" -eq "1" ]
+	then
+		export phpdir=${builddir}php-${phpver}/
+		${scriptdir}/conf/php-fpm.conf.sh > ${phpdir}etc/php-fpm.conf
+		#also add configs to php.ini
+	fi
 	cd ${srcdir}
 fi
 
@@ -139,12 +154,16 @@ then
 			--with-unix-socket-path=${mysqldir}/var/mysql.sock
 	make
 	make install
-	mkdir -p ${mysqldir}/etc/
-	mkdir -p ${mysqldir}/tmp/
-	mkdir -p ${mysqldir}/var/data/
-	mkdir -p ${mysqldir}/var/log/
-	mkdir -p ${mysqldir}/var/log/innodb
-	mkdir -p ${mysqldir}/var/innodb/
-	${scriptdir}/conf/mysql.conf.sh > ${mysqldir}/etc/my.cnf
-	${mysqldir}/bin/mysql_install_db --defaults-file=${mysqldir}/etc/my.cnf
+	if [ "$mysqlconf" -eq "1" ]
+	then
+		mkdir -p ${mysqldir}/etc/
+		mkdir -p ${mysqldir}/tmp/
+		mkdir -p ${mysqldir}/var/data/
+		mkdir -p ${mysqldir}/var/log/
+		mkdir -p ${mysqldir}/var/log/innodb
+		mkdir -p ${mysqldir}/var/innodb/
+		${scriptdir}/conf/mysql.conf.sh > ${mysqldir}/etc/my.cnf
+		${mysqldir}/bin/mysql_install_db --defaults-file=${mysqldir}/etc/my.cnf
+		#also create db and user for magento
+	fi
 fi
