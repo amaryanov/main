@@ -1,6 +1,8 @@
 #!/bin/bash
 
 cat <<EOF
+#start server: ${mysqldir}bin/mysqld_safe --defaults-file=${mysqldir}etc/my.cnf &
+#stop server: sudo ${mysqldir}bin/mysqladmin -v  --defaults-file=${mysqldir}etc/my.cnf shutdown
 # The following options will be passed to all MySQL clients
 [client]
 port		= 3306
