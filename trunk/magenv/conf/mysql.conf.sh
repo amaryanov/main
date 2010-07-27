@@ -1,6 +1,7 @@
 #!/bin/bash
 
-cat <<EOF # The following options will be passed to all MySQL clients
+cat <<EOF
+# The following options will be passed to all MySQL clients
 [client]
 port		= 3306
 socket		= ${mysqldir}var/mysql.sock
