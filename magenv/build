@@ -2,9 +2,9 @@
 
 #####SCRIPT CONFIG#####
 #what to build
-nginxbuild=1
+nginxbuild=0
 phpbuild=1
-mysqlbuild=1
+mysqlbuild=0
 
 #what to configure
 nginxconf=1
@@ -26,14 +26,34 @@ phpfpmver="0.5.14"
 zlibver="1.2.5"
 opsslver="1.0.0a"
 pcrever="8.10"
-mysqlver="5.1"
-mysqlsubver="48"
+mysqlver="5.1.48"
 
 mkdir -p $srcdir
 mkdir -p $builddir
 
 cd $srcdir
 
+if [ "$nginxbuild" -eq "1" -o "$phpbuild" -eq "1" ]
+then
+	wget -c http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz
+	if [ -e pcre-${pcrever} ]
+	then
+		pushd pcre-${pcrever}
+		make clean
+		popd
+	else
+		tar -xzf pcre-${pcrever}.tar.gz
+	fi
+	if [ "$phpbuild" -eq "1" ]
+	then
+		pushd pcre-${pcrever}
+		./configure --prefix=${builddir}other/pcre-${pcrever} --enable-utf8 --enable-unicode-properties --enable-newline-is-any --with-match-limit=500000 --with-match-limit-recursion=500000
+		make
+		make install
+		make clean #clean for nginx
+		popd
+	fi
+fi
 #nginx
 if [ "$nginxbuild" -eq "1" ]
 then
@@ -48,12 +68,10 @@ then
 	fi
 	wget -c http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz
 	wget -c http://www.openssl.org/source/openssl-${opsslver}.tar.gz
-	wget -c http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz
 	wget -c http://zlib.net/zlib-${zlibver}.tar.gz
 	tar -xzf zlib-${zlibver}.tar.gz
 	tar -xzf nginx-${nginxver}.tar.gz
 	tar -xzf openssl-${opsslver}.tar.gz
-	tar -xzf pcre-${pcrever}.tar.gz
 	cd nginx-${nginxver}/
 	./configure --prefix=${builddir}nginx-${nginxver} \
 		--without-poll_module \
@@ -110,24 +128,25 @@ then
 		--enable-fpm \
 		--disable-all \
 		--enable-eaccelerator \
+		--with-mysql=${builddir}mysql-${mysqlver}/ \
+		--with-mysqli=${builddir}mysql-${mysqlver}/bin/mysql_config \
 		--with-pcre-regex \
-		--with-gd \
-		--with-mysql \
-		--with-mcrypt \
-		--with-mhash \
-		--with-curl \
-		--enable-ftp \
-		--with-openssl \
-		--enable-dom \
-		--enable-sockets \
-		--with-zlib \
-		--with-pear \
-		--with-jpeg-dir \
-		--with-png-dir \
-		--with-pdo-mysql \
-		--with-mysqli \
-		--enable-soap \
-		--enable-mbstring
+#		--with-pcre-dir=${builddir}other/pcre-${pcrever}#???
+#		--with-gd \
+#		--with-mcrypt \
+#		--with-mhash \
+#		--with-curl \
+#		--enable-ftp \
+#		--with-openssl \
+#		--enable-dom \
+#		--enable-sockets \
+#		--with-zlib \
+#		--with-pear \
+#		--with-jpeg-dir \
+#		--with-png-dir \
+#		--with-pdo-mysql \
+#		--enable-soap \
+#		--enable-mbstring
 	make
 	make test
 	make install
@@ -143,19 +162,19 @@ fi
 #mysql
 if [ "$mysqlbuild" -eq "1" ]
 then
-	if [ -e "mysql-${mysqlver}.${mysqlsubver}" ]
+	if [ -e "mysql-${mysqlver}" ]
 	then
-		echo "${srcdir}mysql-${mysqlver}.${mysqlsubver} already exist"
+		echo "${srcdir}mysql-${mysqlver} already exist"
 		exit 1
-	elif [ -e "${builddir}mysql-${mysqlver}.${mysqlsubver}" ]
+	elif [ -e "${builddir}mysql-${mysqlver}" ]
 	then
-		echo "${builddir}mysql-${mysqlver}.${mysqlsubver} already exist"
+		echo "${builddir}mysql-${mysqlver} already exist"
 		exit 1
 	fi
-	wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlver}.${mysqlsubver}.tar.gz/from/http://mysql.infocom.ua/
-	tar -xzf mysql-${mysqlver}.${mysqlsubver}.tar.gz
-	export mysqldir=${builddir}mysql-${mysqlver}.${mysqlsubver}/
-	cd  mysql-${mysqlver}.${mysqlsubver}
+	wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlver}.tar.gz/from/http://mysql.infocom.ua/
+	tar -xzf mysql-${mysqlver}.tar.gz
+	export mysqldir=${builddir}mysql-${mysqlver}/ #export for mysql.conf.sh
+	cd  mysql-${mysqlver}
 	CFLAGS="-O3" \
 		CXX=gcc \
 		CXXFLAGS="-O3 -felide-constructors -fno-exceptions -fno-rtti" \
