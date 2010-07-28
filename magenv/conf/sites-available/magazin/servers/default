@@ -1,0 +1,5 @@
+	server_name a.local;
+	access_log /home/okshop/data/logs/a.local.access.log mine;
+	error_log /home/okshop/data/logs/a.local.error.log;
+
+	return 404;

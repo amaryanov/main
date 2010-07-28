@@ -1,0 +1,45 @@
+server {
+	listen   8080;
+	server_name  www.product.ath.cx;
+	rewrite ^/(.*) http://product.ath.cx:8080/$1 permanent;
+}
+
+server {
+	listen   8080;
+	server_name  product.ath.cx;
+	client_max_body_size 10m;
+
+	access_log /home/anton/Sites/product.ath.cx/log/access.log;
+	error_log /home/anton/Sites/product.ath.cx/log/error.log;
+
+	location / {
+		root   /home/anton/Sites/product.ath.cx/public/;
+		index  index.php;
+
+		gzip on;
+		gzip_comp_level 9;
+		gzip_min_length  1000;
+		gzip_proxied any;
+		gzip_types text/plain application/xml text/html text/css text/js application/x-javascript;
+
+		if (-f $request_filename) {
+			expires 30d;
+			break;
+		}
+	}
+	location /dl {
+		root /home/anton/Sites/product.ath.cx/public;
+		post_action @download-stop;
+	}
+
+	location @download-stop {
+		rewrite ^ /download_stop.php?bs=$body_bytes_sent&fname=$request_uri&rem_addr=$remote_addr last;
+	}
+	location ~ \.php$ {
+		fastcgi_pass 127.0.0.1:9000;
+		fastcgi_param SCRIPT_FILENAME /home/anton/Sites/product.ath.cx/public$fastcgi_script_name;
+		fastcgi_param PATH_INFO $fastcgi_script_name;
+		fastcgi_index index.php;
+		include /etc/nginx/fastcgi_params;
+	}
+}

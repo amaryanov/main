@@ -107,9 +107,27 @@ then
 	./buildconf --force
 	./configure --prefix=${builddir}php-${phpver} \
 		--enable-fastcgi \
-		--enable-fpm --disable-all \
+		--enable-fpm \
+		--disable-all \
 		--enable-eaccelerator \
-		--with-pcre-regex
+		--with-pcre-regex \
+		--with-gd \
+		--with-mysql \
+		--with-mcrypt \
+		--with-mhash \
+		--with-curl \
+		--enable-ftp \
+		--with-openssl \
+		--enable-dom \
+		--enable-sockets \
+		--with-zlib \
+		--with-pear \
+		--with-jpeg-dir \
+		--with-png-dir \
+		--with-pdo-mysql \
+		--with-mysqli \
+		--enable-soap \
+		--enable-mbstring
 	make
 	make test
 	make install
