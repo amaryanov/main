@@ -1,0 +1,3 @@
+	server_name m14;
+	access_log /home/anton/sites/m14/logs/access.log mine;
+	error_log /home/anton/sites/m14/logs/error.log;

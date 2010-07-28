@@ -1,0 +1,97 @@
+server {
+	listen 127.0.0.1:443;
+	server_name admin.okshop.9ab.net;
+	keepalive_timeout    70;
+	ssl                  on;
+	ssl_protocols        SSLv3 TLSv1;
+	ssl_certificate      /home/anton/sites/admin.okshop.9ab.net/cert/9ab.net.pem;
+	ssl_certificate_key  /home/anton/sites/admin.okshop.9ab.net/cert/9ab.net.key;
+	ssl_ciphers          AES128-SHA:AES256-SHA:RC4-SHA:DES-CBC3-SHA:RC4-MD5;
+	ssl_session_cache    shared:SSL:10m;
+	ssl_session_timeout  10m;
+
+	gzip  on;
+	gzip_comp_level 9;
+	gzip_proxied any;
+	gzip_types text/plain text/css application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+	access_log /home/anton/sites/admin.okshop.9ab.net/log/access.log;
+	error_log /home/anton/sites/admin.okshop.9ab.net/log/error.log;
+	rewrite ^/(?!((index.php/)?(control|skin|js|minify|downloader|report|apc.php))) https://admin.okshop.9ab.net/control/ permanent;
+	location @allow_control {
+		root /home/anton/sites/admin.okshop.9ab.net/public/;
+		autoindex off;
+		rewrite .* /index.php last;
+	}
+	location ~ ^/(index.php/)?app {
+		deny all;
+	}
+	location ~ ^/(index.php/)?includes {
+		deny all;
+	}
+	location ~ ^/(index.php/)?lib/minify/m.php {
+		root /home/anton/sites/admin.okshop.9ab.net/public/;
+		allow all;
+		fastcgi_pass 127.0.0.1:9000;
+		include /etc/nginx/fastcgi_params;
+		fastcgi_param SCRIPT_FILENAME /home/anton/sites/admin.okshop.9ab.net/public/$fastcgi_script_name;
+		fastcgi_param PATH_INFO $fastcgi_script_name;
+#		fastcgi_connect_timeout 60;
+#		fastcgi_send_timeout 180;
+#		fastcgi_read_timeout 180;
+#		fastcgi_buffer_size 128k;
+#		fastcgi_buffers 4 256k;
+#		fastcgi_busy_buffers_size 256k;
+#		fastcgi_temp_file_write_size 256k;
+#		fastcgi_intercept_errors on;
+		fastcgi_param HTTPS on;
+	}
+	location ~ ^/(index.php/)?lib {
+		deny all;
+	}
+	location ~ ^/(index.php/)?media/downloadable {
+		deny all;
+	}
+	location ~ ^/(index.php/)?pkginfo {
+		deny all;
+	}
+	location ~ ^/(index.php/)?report/config.xml {
+		deny all;
+	}
+	location ~ ^/(index.php/)?var {
+		deny all;
+	}
+	location = /js/index.php/x.js {
+		error_page 404 = @js;
+	}
+	location @js {
+		root /home/anton/sites/admin.okshop.9ab.net/public/;
+		rewrite x.js(.*) /js/index.php last;
+	}
+	location / {
+		root /home/anton/sites/admin.okshop.9ab.net/public/;
+		index index.php;
+		autoindex off;
+		rewrite ^(/index.php)?/minify/([^/]+)(/.*.(js|css))$ /lib/minify/m.php?f=$3&d=$2 last; 
+		# this sends all non-existing file or directory requests to index.php
+		if (!-e $request_filename) {
+			rewrite .* /index.php last;
+			break;
+		}
+	}
+	location ~ \.php$ {
+		fastcgi_pass 127.0.0.1:9000;
+		include /etc/nginx/fastcgi_params;
+		fastcgi_param SCRIPT_FILENAME /home/anton/sites/admin.okshop.9ab.net/public/$fastcgi_script_name;
+		fastcgi_param PATH_INFO $fastcgi_script_name;
+#		fastcgi_connect_timeout 60;
+#		fastcgi_send_timeout 180;
+#		fastcgi_read_timeout 180;
+#		fastcgi_buffer_size 128k;
+#		fastcgi_buffers 4 256k;
+#		fastcgi_busy_buffers_size 256k;
+#		fastcgi_temp_file_write_size 256k;
+#		fastcgi_intercept_errors on;
+		fastcgi_param HTTPS on;
+		fastcgi_param  SERVER_SOFTWARE    nginx;
+	}
+}

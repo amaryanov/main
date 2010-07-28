@@ -1,0 +1,12 @@
+server {
+	listen   80;
+	server_name  192.168.1.182;
+	client_max_body_size 10m;
+
+	access_log /var/log/openwrt.log;
+	error_log /var/log/openwrt.error.log;
+
+	location / {
+		root   /home/anton/sites/openwrt/public;
+	}
+}
