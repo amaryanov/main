@@ -12,12 +12,12 @@ phpconf=1
 mysqlconf=1
 #####END SCRIPT CONFIG#####
 
-scriptpath=$(readlink -f $0)
-scriptdir=`dirname $scriptpath`
+scriptdir=`dirname $(readlink -f $0)`
 
-topdir=$PWD
-srcdir=$topdir/src/
-builddir=$topdir/build/
+topdir=$PWD/
+srcdir=${topdir}src/
+builddir=${topdir}build/
+archdir=${topdir}arch/
 
 nginxver="0.7.67"
 phpver="5.2.13"
@@ -27,30 +27,62 @@ zlibver="1.2.5"
 opsslver="1.0.0a"
 pcrever="8.10"
 mysqlver="5.1.48"
+curlver="7.21.0"
+mcryptver="2.5.8"
+mhashver="0.9.9.9"
 
 mkdir -p $srcdir
 mkdir -p $builddir
+mkdir -p $archdir
 
-cd $srcdir
+pushd $srcdir
 
 if [ "$nginxbuild" -eq "1" -o "$phpbuild" -eq "1" ]
 then
-	wget -c http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz
-	if [ -e pcre-${pcrever} ]
+	if [ -e zlib-${zlibver} ]
 	then
-		pushd pcre-${pcrever}
-		make clean
+		pushd zlib-${zlibver}
+			make clean
 		popd
 	else
-		tar -xzf pcre-${pcrever}.tar.gz
+		pushd $archdir
+			wget -c http://zlib.net/zlib-${zlibver}.tar.gz
+		popd
+		tar -xzf ${archdir}zlib-${zlibver}.tar.gz
 	fi
 	if [ "$phpbuild" -eq "1" ]
 	then
-		pushd pcre-${pcrever}
-		./configure --prefix=${builddir}other/pcre-${pcrever} --enable-utf8 --enable-unicode-properties --enable-newline-is-any --with-match-limit=500000 --with-match-limit-recursion=500000
-		make
-		make install
-		make clean #clean for nginx
+		pushd zlib-${zlibver}
+			./configure --prefix=${builddir}other/zlib-${zlibver} && \
+			make && \
+			make install && \
+			make clean || exit #clean for nginx
+		popd
+	fi
+fi
+
+
+if [ "$nginxbuild" -eq "1" -o "$phpbuild" -eq "1" ]
+then
+	if [ -e openssl-${opsslver} ]
+	then
+		pushd openssl-${opsslver}
+			make clean
+		popd
+	else
+		pushd $archdir
+			wget -c http://www.openssl.org/source/openssl-${opsslver}.tar.gz
+		popd
+		tar -xzf ${archdir}openssl-${opsslver}.tar.gz
+	fi
+	if [ "$phpbuild" -eq "1" ]
+	then
+		pushd openssl-${opsslver}
+			./config --prefix=${builddir}other/openssl-${opsslver} threads zlib shared && \
+			make && \
+			make test && \
+			make install && \
+			make clean || exit #clean for nginx
 		popd
 	fi
 fi
@@ -66,35 +98,39 @@ then
 		echo "${builddir}nginx-${nginxver} already exist"
 		exit 1
 	fi
-	wget -c http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz
-	wget -c http://www.openssl.org/source/openssl-${opsslver}.tar.gz
-	wget -c http://zlib.net/zlib-${zlibver}.tar.gz
-	tar -xzf zlib-${zlibver}.tar.gz
-	tar -xzf nginx-${nginxver}.tar.gz
-	tar -xzf openssl-${opsslver}.tar.gz
-	cd nginx-${nginxver}/
-	./configure --prefix=${builddir}nginx-${nginxver} \
-		--without-poll_module \
-		--without-select_module \
-		--with-http_ssl_module \
-		--without-http_ssi_module \
-		--without-http_userid_module \
-		--without-http_autoindex_module \
-		--without-http_geo_module \
-		--without-http_referer_module \
-		--without-mail_pop3_module \
-		--without-mail_imap_module \
-		--without-mail_smtp_module \
-		--with-pcre=${srcdir}/pcre-${pcrever} \
-		--with-zlib=${srcdir}/zlib-${zlibver} \
-		--with-openssl=${srcdir}/openssl-${opsslver}
-	make
-	make install
-	if [ "$nginxconf" -eq "1" ]
-	then
-		#configure main and add configs for magento
-	fi
-	cd ${srcdir}
+
+	pushd $archdir
+		wget -c http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz
+		wget -c http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz
+	popd
+
+	tar -xzf ${archdir}nginx-${nginxver}.tar.gz
+	tar -xzf ${archdir}pcre-${pcrever}.tar.gz
+
+	pushd nginx-${nginxver}/
+		./configure --prefix=${builddir}nginx-${nginxver} \
+			--without-poll_module \
+			--without-select_module \
+			--with-http_ssl_module \
+			--without-http_ssi_module \
+			--without-http_userid_module \
+			--without-http_autoindex_module \
+			--without-http_geo_module \
+			--without-http_referer_module \
+			--without-mail_pop3_module \
+			--without-mail_imap_module \
+			--without-mail_smtp_module \
+			--with-pcre=${srcdir}/pcre-${pcrever} \
+			--with-zlib=${srcdir}/zlib-${zlibver} \
+			--with-openssl=${srcdir}/openssl-${opsslver} && \
+		make && \
+		make install || exit
+		if [ "$nginxconf" -eq "1" ]
+		then
+			echo "NGINX CONFIGURATION DOES NOT IMPLEMENTED"
+			#configure main and add configs for magento
+		fi
+	popd
 fi
 
 #php
@@ -113,50 +149,113 @@ then
 		echo "${builddir}php-${phpver} already exist"
 		exit 1
 	fi
-	wget -c http://ua.php.net/get/php-${phpver}.tar.gz/from/ua2.php.net/mirror
-	wget -c http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2
-	wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz
-	tar -xzf php-${phpver}.tar.gz
-	gzip -fdc php-${phpver}-fpm-${phpfpmver}.diff.gz > php-${phpver}-fpm-${phpfpmver}.diff
-	tar -xjf eaccelerator-${eaccver}.tar.bz2
-	cd php-${phpver}
-	patch -p1 < ${srcdir}/php-${phpver}-fpm-${phpfpmver}.diff
-	cp -r ${srcdir}/eaccelerator-${eaccver} ext/eaccelerator
-	./buildconf --force
-	./configure --prefix=${builddir}php-${phpver} \
-		--enable-fastcgi \
-		--enable-fpm \
-		--disable-all \
-		--enable-eaccelerator \
-		--with-mysql=${builddir}mysql-${mysqlver}/ \
-		--with-mysqli=${builddir}mysql-${mysqlver}/bin/mysql_config \
-		--with-pcre-regex \
-#		--with-pcre-dir=${builddir}other/pcre-${pcrever}#???
-#		--with-gd \
-#		--with-mcrypt \
-#		--with-mhash \
-#		--with-curl \
-#		--enable-ftp \
-#		--with-openssl \
-#		--enable-dom \
-#		--enable-sockets \
-#		--with-zlib \
-#		--with-pear \
-#		--with-jpeg-dir \
-#		--with-png-dir \
-#		--with-pdo-mysql \
-#		--enable-soap \
-#		--enable-mbstring
-	make
-	make test
-	make install
-	if [ "$phpconf" -eq "1" ]
-	then
-		export phpdir=${builddir}php-${phpver}/
-		${scriptdir}/conf/php-fpm.conf.sh > ${phpdir}etc/php-fpm.conf
-		#also add configs to php.ini
-	fi
-	cd ${srcdir}
+	pushd ${archdir}
+		wget -c http://ua.php.net/get/php-${phpver}.tar.gz/from/ua2.php.net/mirror
+		wget -c http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2
+		wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz
+		wget -c http://curl.haxx.se/download/curl-${curlver}.tar.gz
+		wget -c http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download
+		wget -c http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download
+	popd
+
+	tar -xzf ${archdir}mhash-${mhashver}.tar.gz
+	pushd mhash-${mhashver}
+		./configure --prefix=${builddir}other/mhash-${mhashver} && \
+		make && \
+		make install || exit
+	popd
+
+	tar -xzf ${archdir}libmcrypt-${mcryptver}.tar.gz
+	pushd libmcrypt-${mcryptver}
+		./configure --prefix=${builddir}other/libmcrypt-${mcryptver} && \
+		make && \
+		make install || exit
+	popd
+
+	tar -xzf ${archdir}curl-${curlver}.tar.gz
+	pushd curl-${curlver}
+		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/openssl-${opsslver}/lib -Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib" \
+		./configure --prefix=${builddir}other/curl-${curlver} \
+			--disable-debug \
+			--enable-optimize \
+			--disable-warnings \
+			--disable-curldebug \
+			--disable-ares \
+			--enable-http \
+			--enable-ftp \
+			--disable-file \
+			--enable-ldaps \
+			--disable-ldaps \
+			--disable-rtsp \
+			--enable-proxy \
+			--disable-dict \
+			--disable-telnet \
+			--disable-tftp \
+			--disable-pop3 \
+			--disable-imap \
+			--disable-smtp \
+			--disable-manual \
+			--disable-ipv6 \
+			--enable-nonblocking \
+			--enable-threaded-resolver \
+			--enable-verbose \
+			--disable-sspi \
+			--enable-crypto-auth \
+			--enable-cookies \
+			--without-libssh2 \
+			--without-librtmp \
+			--with-zlib=${builddir}other/zlib-${zlibver} \
+			--with-ssl=${builddir}other/openssl-${opsslver} \
+			--without-gnutls \
+			--without-polarssl \
+			--without-nss \
+			--without-ca-bundle \
+			--without-ca-path \
+			--without-libidn && \
+		make &&\
+		make install || exit
+	popd
+
+	tar -xzf ${archdir}php-${phpver}.tar.gz
+	gzip -fdc ${archdir}php-${phpver}-fpm-${phpfpmver}.diff.gz > php-${phpver}-fpm-${phpfpmver}.diff
+	tar -xjf ${archdir}eaccelerator-${eaccver}.tar.bz2
+
+	pushd php-${phpver}
+		patch -p1 < ${srcdir}/php-${phpver}-fpm-${phpfpmver}.diff
+		cp -r ${srcdir}/eaccelerator-${eaccver} ext/eaccelerator
+		./buildconf --force && \
+		./configure --prefix=${builddir}php-${phpver} \
+			--enable-fastcgi \
+			--enable-fpm \
+			--disable-all \
+			--enable-eaccelerator \
+			--with-mysql=${builddir}mysql-${mysqlver}/ \
+			--with-mysqli=${builddir}mysql-${mysqlver}/bin/mysql_config \
+			--with-pcre-regex \
+			--with-gd \
+			--with-mcrypt=${builddir}other/libmcrypt-${mcryptver} \
+			--with-mhash=${builddir}other/mhash-${mhashver} \
+			--with-curl=${builddir}other/curl-${curlver} \
+			--enable-ftp \
+			--with-openssl=${builddir}other/openssl-${opsslver} \
+			--enable-dom \
+			--enable-sockets \
+			--with-zlib \
+			--with-pear \
+			--with-jpeg-dir \
+			--with-png-dir \
+			--with-pdo-mysql \
+			--enable-soap \
+			--enable-mbstring \
+			--enable-libxml && \
+		make &&	make test && make install || exit
+		if [ "$phpconf" -eq "1" ]
+		then
+			export phpdir=${builddir}php-${phpver}/
+			${scriptdir}/conf/php-fpm.conf.sh > ${phpdir}etc/php-fpm.conf
+			#also add configs to php.ini
+		fi
+	popd
 fi
 
 #mysql
@@ -171,36 +270,51 @@ then
 		echo "${builddir}mysql-${mysqlver} already exist"
 		exit 1
 	fi
-	wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlver}.tar.gz/from/http://mysql.infocom.ua/
-	tar -xzf mysql-${mysqlver}.tar.gz
-	export mysqldir=${builddir}mysql-${mysqlver}/ #export for mysql.conf.sh
-	cd  mysql-${mysqlver}
-	CFLAGS="-O3" \
-		CXX=gcc \
-		CXXFLAGS="-O3 -felide-constructors -fno-exceptions -fno-rtti" \
-		./configure --prefix=${mysqldir} \
-			--with-mysqld-ldflags=-all-static \
-			--enable-assembler \
-			--enable-thread-safe-client \
-			--disable-shared \
-			--disable-static \
-			--with-charset=utf8 \
-			--with-extra-charsets=ascii,cp1251,koi8r,latin1,latin2 \
-			--with-plugins=innobase,myisam,partition,myisammrg \
-			--with-mysqld-user=mysql \
-			--with-unix-socket-path=${mysqldir}/var/mysql.sock
-	make
-	make install
-	if [ "$mysqlconf" -eq "1" ]
-	then
-		mkdir -p ${mysqldir}/etc/
-		mkdir -p ${mysqldir}/tmp/
-		mkdir -p ${mysqldir}/var/data/
-		mkdir -p ${mysqldir}/var/log/
-		mkdir -p ${mysqldir}/var/log/innodb
-		mkdir -p ${mysqldir}/var/innodb/
-		${scriptdir}/conf/mysql.conf.sh > ${mysqldir}/etc/my.cnf
-		${mysqldir}/bin/mysql_install_db --defaults-file=${mysqldir}/etc/my.cnf
-		#also create db and user for magento
-	fi
+
+	pushd ${archdir}
+		wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlver}.tar.gz/from/http://mysql.infocom.ua/
+	popd
+
+	tar -xzf ${archdir}mysql-${mysqlver}.tar.gz
+
+	export mysqldir=${builddir}mysql-data/ #export for mysql.conf.sh
+
+	pushd  mysql-${mysqlver}
+		CFLAGS="-O3" \
+			CXX=gcc \
+			CXXFLAGS="-O3 -felide-constructors -fno-exceptions -fno-rtti" \
+			./configure --prefix=${mysqldir} \
+				--with-mysqld-ldflags=-all-static \
+				--enable-assembler \
+				--enable-thread-safe-client \
+				--disable-shared \
+				--disable-static \
+				--with-charset=utf8 \
+				--with-extra-charsets=ascii,cp1251,koi8r,latin1,latin2 \
+				--with-plugins=innobase,myisam,partition,myisammrg \
+				--with-mysqld-user=mysql \
+				--with-unix-socket-path=${mysqldir}/var/mysql.sock && \
+		make && \
+		make install || exit
+		if [ "$mysqlconf" -eq "1" ]
+		then
+			mkdir -p ${mysqldir}/etc/
+			mkdir -p ${mysqldir}/tmp/
+			mkdir -p ${mysqldir}/var/data/
+			mkdir -p ${mysqldir}/var/log/
+			mkdir -p ${mysqldir}/var/log/innodb
+			mkdir -p ${mysqldir}/var/innodb/
+			${scriptdir}/conf/mysql.conf.sh > ${mysqldir}/etc/my.cnf
+			${mysqldir}/bin/mysql_install_db --defaults-file=${mysqldir}/etc/my.cnf
+			#also create db and user for magento
+		fi
+	popd
 fi
+
+popd
+#- add LIBDIR to the `LD_LIBRARY_PATH' environment variable
+#during execution
+#- add LIBDIR to the `LD_RUN_PATH' environment variable
+#during linking
+#- use the `-Wl,-rpath -Wl,LIBDIR' linker flag
+#- have your system administrator add LIBDIR to `/etc/ld.so.conf'
