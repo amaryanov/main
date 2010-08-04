@@ -1,52 +1,52 @@
 #!/bin/bash
 
 cat <<EOF
-#start server: ${mysqldir}bin/mysqld_safe --defaults-file=${mysqldir}etc/my.cnf &
-#stop server: sudo ${mysqldir}bin/mysqladmin -v  --defaults-file=${mysqldir}etc/my.cnf shutdown
+#start server: ${mysqlinstalldir}bin/mysqld_safe --defaults-file=${mysqldatadir}etc/my.cnf &
+#stop server: sudo ${mysqlinstalldir}bin/mysqladmin --defaults-file=${mysqldatadir}etc/my.cnf -v shutdown
 # The following options will be passed to all MySQL clients
 [client]
 port		= 3306
-socket		= ${mysqldir}var/mysql.sock
+socket		= ${mysqldatadir}var/mysql.sock
 
 # Here follows entries for some specific programs
 
 # The MySQL server
 [mysqld]
-datadir	= ${mysqldir}var/data/
+datadir	= ${mysqldatadir}var/data/
 port		= 3306
-socket		= ${mysqldir}var/mysql.sock
+socket		= ${mysqldatadir}var/mysql.sock
 
-pid-file	= ${mysqldir}var/mysql.pid
+pid-file	= ${mysqldatadir}var/mysql.pid
 general_log
-general_log_file = ${mysqldir}var/log/general.log
-log-error = ${mysqldir}var/log/error.log
-log-isam = ${mysqldir}var/log/myisam.log
-log-bin=${mysqldir}var/log/log-bin.log
-log-bin-index = ${mysqldir}var/log/bin-index.log
+general_log_file = ${mysqldatadir}var/log/general.log
+log-error = ${mysqldatadir}var/log/error.log
+log-isam = ${mysqldatadir}var/log/myisam.log
+log-bin=${mysqldatadir}var/log/log-bin.log
+log-bin-index = ${mysqldatadir}var/log/bin-index.log
 log-slow-admin-statements
 log-slow-slave-statements
-log-tc=${mysqldir}var/log/log-tc.log
+log-tc=${mysqldatadir}var/log/log-tc.log
 log-warnings
 log-output=FILE
 long_query_time = 1
-relay-log = ${mysqldir}var/log/relay.log
-relay-log-index = ${mysqldir}var/log/relay-index.log
-relay-log-info-file = ${mysqldir}var/log/relay-log-info.log
+relay-log = ${mysqldatadir}var/log/relay.log
+relay-log-index = ${mysqldatadir}var/log/relay-index.log
+relay-log-info-file = ${mysqldatadir}var/log/relay-log-info.log
 slow-query-log
-slow_query_log_file = ${mysqldir}var/log/slow.log
+slow_query_log_file = ${mysqldatadir}var/log/slow.log
 log-queries-not-using-indexes
 log-slave-updates
 innodb=ON
-innodb_data_home_dir = ${mysqldir}var/innodb/
+innodb_data_home_dir = ${mysqldatadir}var/innodb/
 innodb_data_file_path = ibdata1:10M:autoextend
-innodb_log_group_home_dir = ${mysqldir}var/log/innodb/
+innodb_log_group_home_dir = ${mysqldatadir}var/log/innodb/
 innodb_buffer_pool_size = 16M
 innodb_additional_mem_pool_size = 2M
 innodb_log_file_size = 5M
 innodb_log_buffer_size = 8M
 innodb_flush_log_at_trx_commit = 1
 innodb_lock_wait_timeout = 50
-tmpdir = ${mysqldir}tmp/
+tmpdir = ${mysqldatadir}tmp/
 
 
 skip-external-locking
@@ -69,7 +69,7 @@ skip-networking
 
 # Replication Master Server (default)
 # binary logging is required for replication
-log-bin=${mysqldir}var/log/mysql-bin
+log-bin=${mysqldatadir}var/log/mysql-bin
 
 # binary logging format - mixed recommended
 binlog_format=mixed
