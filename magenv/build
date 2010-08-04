@@ -56,7 +56,7 @@ then
 		popd
 		tar -xzf ${archdir}zlib-${zlibver}.tar.gz
 	fi
-	if [ "$phpbuild" -eq "1" ]
+	if [ "$phpbuild" -eq "1" -o "$mysqlbuild" -eq "1" ]
 	then
 		pushd zlib-${zlibver}
 			./configure --prefix=${builddir}other/zlib-${zlibver} && \
