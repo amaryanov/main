@@ -30,6 +30,7 @@ mysqlver="5.1.48"
 curlver="7.21.0"
 mcryptver="2.5.8"
 mhashver="0.9.9.9"
+libxmlver="2.7.7"
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -78,7 +79,12 @@ then
 	if [ "$phpbuild" -eq "1" ]
 	then
 		pushd openssl-${opsslver}
-			./config --prefix=${builddir}other/openssl-${opsslver} threads zlib shared && \
+			./config --prefix=${builddir}other/openssl-${opsslver} \
+				--with-zlib-lib=${builddir}other/zlib-${zlibver}/lib \
+				--with-zlib-include=${builddir}other/zlib-${zlibver}/include \
+				-Wl,-rpath \
+				-Wl,/home/anton/buil/build/other/zlib-1.2.5/lib \
+				threads zlib shared && \
 			make && \
 			make test && \
 			make install && \
@@ -136,9 +142,10 @@ fi
 #php
 if [ "$phpbuild" -eq "1" ]
 then
-	if [ -n "`autoconf --version | head -n 1 | tr -d '\n' | sed 's/Autoconf version [2-9]\.[1-9][3-9]//'`" ]
+	if [ -z "`which autoconf`" -o -n "`autoconf --version 2>/dev/null | head -n 1 | tr -d '\n' | sed 's/Autoconf version [2-9]\.[1-9][3-9]//'`" ]
 	then
 		echo "Need autoconf version >= 2.13"
+		exit
 	fi
 	if [ -e "php-${phpver}" ]
 	then
@@ -150,12 +157,21 @@ then
 		exit 1
 	fi
 	pushd ${archdir}
-		wget -c http://ua.php.net/get/php-${phpver}.tar.gz/from/ua2.php.net/mirror
+		wget -c http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror
 		wget -c http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2
 		wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz
 		wget -c http://curl.haxx.se/download/curl-${curlver}.tar.gz
 		wget -c http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download
 		wget -c http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download
+		wget -c ftp://xmlsoft.org/libxml2/libxml2-${libxmlver}.tar.gz
+		wget -c http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.13.1.tar.gz
+	popd
+
+	tar -xzf ${archdir}libxml2-${libxmlver}.tar.gz
+	pushd libxml2-${libxmlver}
+		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib" ./configure --prefix=${builddir}other/libxml2-${libxmlver} --with-zlib=${builddir}other/zlib-${zlibver} && \
+		make && \
+		make install || exit
 	popd
 
 	tar -xzf ${archdir}mhash-${mhashver}.tar.gz
@@ -240,14 +256,15 @@ then
 			--with-openssl=${builddir}other/openssl-${opsslver} \
 			--enable-dom \
 			--enable-sockets \
-			--with-zlib \
+			--with-zlib=${builddir}other/zlib-${zlibver} \
 			--with-pear \
-			--with-jpeg-dir \
-			--with-png-dir \
 			--with-pdo-mysql \
 			--enable-soap \
+			--with-jpeg-dir \
+			--with-png-dir \
 			--enable-mbstring \
-			--enable-libxml && \
+			--enable-libxml \
+			--with-libxml-dir=${builddir}other/libxml2-${libxmlver} && \
 		make &&	make test && make install || exit
 		if [ "$phpconf" -eq "1" ]
 		then
@@ -272,7 +289,7 @@ then
 	fi
 
 	pushd ${archdir}
-		wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlver}.tar.gz/from/http://mysql.infocom.ua/
+		wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlver}.tar.gz/from/http://ftp.gwdg.de/
 	popd
 
 	tar -xzf ${archdir}mysql-${mysqlver}.tar.gz
