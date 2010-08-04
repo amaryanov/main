@@ -4,7 +4,7 @@
 #what to build
 nginxbuild=0
 phpbuild=1
-mysqlbuild=0
+mysqlbuild=1
 
 #what to configure
 nginxconf=1
@@ -26,11 +26,16 @@ phpfpmver="0.5.14"
 zlibver="1.2.5"
 opsslver="1.0.0a"
 pcrever="8.10"
-mysqlver="5.1.48"
+mysqlver="5.1"
+mysqlsubver="49"
+mysqlfullver=$mysqlver.$mysqlsubver
 curlver="7.21.0"
 mcryptver="2.5.8"
 mhashver="0.9.9.9"
 libxmlver="2.7.7"
+iconvver="1.13.1"
+jpegver="8b"
+pngver="1.4.3"
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -38,7 +43,7 @@ mkdir -p $archdir
 
 pushd $srcdir
 
-if [ "$nginxbuild" -eq "1" -o "$phpbuild" -eq "1" ]
+if [ "$nginxbuild" -eq "1" -o "$phpbuild" -eq "1" -o "$mysqlbuild" -eq "1" ]
 then
 	if [ -e zlib-${zlibver} ]
 	then
@@ -62,7 +67,6 @@ then
 	fi
 fi
 
-
 if [ "$nginxbuild" -eq "1" -o "$phpbuild" -eq "1" ]
 then
 	if [ -e openssl-${opsslver} ]
@@ -83,7 +87,7 @@ then
 				--with-zlib-lib=${builddir}other/zlib-${zlibver}/lib \
 				--with-zlib-include=${builddir}other/zlib-${zlibver}/include \
 				-Wl,-rpath \
-				-Wl,/home/anton/buil/build/other/zlib-1.2.5/lib \
+				-Wl,${builddir}other/zlib-${zlibver}/lib \
 				threads zlib shared && \
 			make && \
 			make test && \
@@ -139,6 +143,60 @@ then
 	popd
 fi
 
+#mysql
+if [ "$mysqlbuild" -eq "1" ]
+then
+	if [ -e "mysql-${mysqlfullver}" ]
+	then
+		echo "${srcdir}mysql-${mysqlfullver} already exist"
+		exit 1
+	elif [ -e "${builddir}mysql-${mysqlfullver}" ]
+	then
+		echo "${builddir}mysql-${mysqlfullver} already exist"
+		exit 1
+	fi
+
+	pushd ${archdir}
+		wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/
+	popd
+
+	tar -xzf ${archdir}mysql-${mysqlfullver}.tar.gz
+
+	export mysqldatadir=${builddir}mysql-data/ #export for mysql.conf.sh
+	export mysqlinstalldir=${builddir}mysql-${mysqlfullver}/ #export for mysql.conf.sh
+
+	pushd  mysql-${mysqlfullver}
+		CFLAGS="-O3" \
+			CXX=gcc \
+			CXXFLAGS="-O3 -felide-constructors -fno-exceptions -fno-rtti" \
+			LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib" \
+			./configure --prefix=${mysqlinstalldir} \
+				--with-mysqld-ldflags=-all-static \
+				--enable-assembler \
+				--enable-thread-safe-client \
+				--with-charset=utf8 \
+				--with-zlib-dir=${builddir}other/zlib-${zlibver} \
+				--with-extra-charsets=ascii,cp1251,koi8r,latin1,latin2 \
+				--with-plugins=innobase,myisam,partition,myisammrg \
+				--with-mysqld-user=mysql \
+				--with-unix-socket-path=${mysqldatadir}/var/mysql.sock && \
+		make && \
+		make install || exit
+		if [ "$mysqlconf" -eq "1" ]
+		then
+			mkdir -p ${mysqldatadir}/etc/
+			mkdir -p ${mysqldatadir}/tmp/
+			mkdir -p ${mysqldatadir}/var/data/
+			mkdir -p ${mysqldatadir}/var/log/
+			mkdir -p ${mysqldatadir}/var/log/innodb
+			mkdir -p ${mysqldatadir}/var/innodb/
+			${scriptdir}/conf/mysql.conf.sh > ${mysqldatadir}/etc/my.cnf
+			${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/etc/my.cnf
+			#also create db and user for magento
+		fi
+	popd
+fi
+
 #php
 if [ "$phpbuild" -eq "1" ]
 then
@@ -163,13 +221,35 @@ then
 		wget -c http://curl.haxx.se/download/curl-${curlver}.tar.gz
 		wget -c http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download
 		wget -c http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download
-		wget -c ftp://xmlsoft.org/libxml2/libxml2-${libxmlver}.tar.gz
-		wget -c http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.13.1.tar.gz
+		wget -c http://fr.rpmfind.net/pub/libxml/libxml2-${libxmlver}.tar.gz
+		wget -c http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${iconvver}.tar.gz
+		wget -c http://www.ijg.org/files/jpegsrc.v${jpegver}.tar.gz
+		wget -c http://sourceforge.net/projects/libpng/files/01-libpng-master/${pngver}/libpng-${pngver}.tar.gz/download
+	popd
+
+	tar -xzf ${archdir}libpng-${pngver}.tar.gz
+	pushd libpng-${pngver}
+		./configure --prefix=${builddir}other/libpng-${pngver} && \
+		make && \
+		make install || exit
+	popd
+
+	tar -xzf ${archdir}jpegsrc.v${jpegver}.tar.gz
+	pushd jpeg-${jpegver}
+		./configure --prefix=${builddir}other/libjpeg-${jpegver} && \
+		make && \
+		make install || exit
+	popd
+
+	tar -xzf ${archdir}libpng-${pngver}.tar.gz
+	pushd libpng-${pngver}
 	popd
 
 	tar -xzf ${archdir}libxml2-${libxmlver}.tar.gz
 	pushd libxml2-${libxmlver}
-		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib" ./configure --prefix=${builddir}other/libxml2-${libxmlver} --with-zlib=${builddir}other/zlib-${zlibver} && \
+		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib" ./configure \
+			--prefix=${builddir}other/libxml2-${libxmlver} \
+			--with-zlib=${builddir}other/zlib-${zlibver} && \
 		make && \
 		make install || exit
 	popd
@@ -245,8 +325,8 @@ then
 			--enable-fpm \
 			--disable-all \
 			--enable-eaccelerator \
-			--with-mysql=${builddir}mysql-${mysqlver}/ \
-			--with-mysqli=${builddir}mysql-${mysqlver}/bin/mysql_config \
+			--with-mysql=${builddir}mysql-${mysqlfullver}/ \
+			--with-mysqli=${builddir}mysql-${mysqlfullver}/bin/mysql_config \
 			--with-pcre-regex \
 			--with-gd \
 			--with-mcrypt=${builddir}other/libmcrypt-${mcryptver} \
@@ -260,12 +340,15 @@ then
 			--with-pear \
 			--with-pdo-mysql \
 			--enable-soap \
-			--with-jpeg-dir \
-			--with-png-dir \
+			--with-jpeg-dir=${builddir}other/libjpeg-${jpegver} \
+			--with-png-dir=${builddir}other/libpng-${pngver} \
 			--enable-mbstring \
+			--enable-xml \
 			--enable-libxml \
 			--with-libxml-dir=${builddir}other/libxml2-${libxmlver} && \
-		make &&	make test && make install || exit
+		make &&	\
+		make test && \
+		make install || exit
 		if [ "$phpconf" -eq "1" ]
 		then
 			export phpdir=${builddir}php-${phpver}/
@@ -275,63 +358,4 @@ then
 	popd
 fi
 
-#mysql
-if [ "$mysqlbuild" -eq "1" ]
-then
-	if [ -e "mysql-${mysqlver}" ]
-	then
-		echo "${srcdir}mysql-${mysqlver} already exist"
-		exit 1
-	elif [ -e "${builddir}mysql-${mysqlver}" ]
-	then
-		echo "${builddir}mysql-${mysqlver} already exist"
-		exit 1
-	fi
-
-	pushd ${archdir}
-		wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlver}.tar.gz/from/http://ftp.gwdg.de/
-	popd
-
-	tar -xzf ${archdir}mysql-${mysqlver}.tar.gz
-
-	export mysqldir=${builddir}mysql-data/ #export for mysql.conf.sh
-
-	pushd  mysql-${mysqlver}
-		CFLAGS="-O3" \
-			CXX=gcc \
-			CXXFLAGS="-O3 -felide-constructors -fno-exceptions -fno-rtti" \
-			./configure --prefix=${mysqldir} \
-				--with-mysqld-ldflags=-all-static \
-				--enable-assembler \
-				--enable-thread-safe-client \
-				--disable-shared \
-				--disable-static \
-				--with-charset=utf8 \
-				--with-extra-charsets=ascii,cp1251,koi8r,latin1,latin2 \
-				--with-plugins=innobase,myisam,partition,myisammrg \
-				--with-mysqld-user=mysql \
-				--with-unix-socket-path=${mysqldir}/var/mysql.sock && \
-		make && \
-		make install || exit
-		if [ "$mysqlconf" -eq "1" ]
-		then
-			mkdir -p ${mysqldir}/etc/
-			mkdir -p ${mysqldir}/tmp/
-			mkdir -p ${mysqldir}/var/data/
-			mkdir -p ${mysqldir}/var/log/
-			mkdir -p ${mysqldir}/var/log/innodb
-			mkdir -p ${mysqldir}/var/innodb/
-			${scriptdir}/conf/mysql.conf.sh > ${mysqldir}/etc/my.cnf
-			${mysqldir}/bin/mysql_install_db --defaults-file=${mysqldir}/etc/my.cnf
-			#also create db and user for magento
-		fi
-	popd
-fi
-
 popd
-#- add LIBDIR to the `LD_LIBRARY_PATH' environment variable
-#during execution
-#- add LIBDIR to the `LD_RUN_PATH' environment variable
-#during linking
-#- use the `-Wl,-rpath -Wl,LIBDIR' linker flag
-#- have your system administrator add LIBDIR to `/etc/ld.so.conf'
