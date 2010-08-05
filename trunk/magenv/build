@@ -334,9 +334,10 @@ then
 		cp -r ${srcdir}/eaccelerator-${eaccver} ext/eaccelerator
 		./buildconf --force && \
 		./configure --prefix=${builddir}php-${phpver} \
+			--disable-all \
 			--enable-fastcgi \
 			--enable-fpm \
-			--disable-all \
+			--enable-session \
 			--enable-eaccelerator \
 			--with-mysql=${builddir}mysql-${mysqlfullver}/ \
 			--with-mysqli=${builddir}mysql-${mysqlfullver}/bin/mysql_config \
