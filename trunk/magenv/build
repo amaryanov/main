@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#need: autoconf > 2.13, g++, patch
 #####SCRIPT CONFIG#####
 #what to build
 nginxbuild=1
