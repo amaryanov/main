@@ -2,9 +2,9 @@
 
 #####SCRIPT CONFIG#####
 #what to build
-nginxbuild=0
-phpbuild=1
+nginxbuild=1
 mysqlbuild=1
+phpbuild=1
 
 #what to configure
 nginxconf=1
@@ -36,6 +36,7 @@ libxmlver="2.7.7"
 iconvver="1.13.1"
 jpegver="8b"
 pngver="1.4.3"
+ncursesver="5.7"
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -158,6 +159,14 @@ then
 
 	pushd ${archdir}
 		wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/
+		wget -c http://ftp.gnu.org/pub/gnu/ncurses/ncurses-${ncursesver}.tar.gz
+	popd
+
+	tar -xzf ${archdir}ncurses-${ncursesver}.tar.gz
+	pushd ncurses-${ncursesver}
+		./configure --prefix=${builddir}other/ncurses-${ncursesver} && \
+		make && \
+		make install || exit
 	popd
 
 	tar -xzf ${archdir}mysql-${mysqlfullver}.tar.gz
@@ -172,8 +181,10 @@ then
 			LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib" \
 			./configure --prefix=${mysqlinstalldir} \
 				--with-mysqld-ldflags=-all-static \
+				--with-client-ldflags=-all-static \
 				--enable-assembler \
 				--enable-thread-safe-client \
+				--with-named-curses-libs=${builddir}other/ncurses-${ncursesver}/lib/libncurses.a \
 				--with-charset=utf8 \
 				--with-zlib-dir=${builddir}other/zlib-${zlibver} \
 				--with-extra-charsets=ascii,cp1251,koi8r,latin1,latin2 \
@@ -229,7 +240,9 @@ then
 
 	tar -xzf ${archdir}libpng-${pngver}.tar.gz
 	pushd libpng-${pngver}
-		./configure --prefix=${builddir}other/libpng-${pngver} && \
+		CFLAGS="-I${builddir}other/zlib-${zlibver}/include" \
+		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib -L${builddir}other/zlib-${zlibver}/lib" \
+			./configure --prefix=${builddir}other/libpng-${pngver} && \
 		make && \
 		make install || exit
 	popd
@@ -345,6 +358,7 @@ then
 			--enable-mbstring \
 			--enable-xml \
 			--enable-libxml \
+			--with-xml-config=${builddir}other/libxml2-${libxmlver}/bin/xml2-config \
 			--with-libxml-dir=${builddir}other/libxml2-${libxmlver} && \
 		make &&	\
 		make test && \
