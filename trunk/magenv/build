@@ -1,5 +1,5 @@
 #!/bin/bash
-#need: autoconf > 2.13, g++, patch
+#need: autoconf >= 2.13, g++, patch
 #####SCRIPT CONFIG#####
 #what to build
 nginxbuild=1
@@ -18,6 +18,7 @@ topdir=$PWD/
 srcdir=${topdir}src/
 builddir=${topdir}build/
 archdir=${topdir}arch/
+datadir=${topdir}data/
 
 nginxver="0.7.67"
 phpver="5.2.13"
@@ -41,24 +42,23 @@ ncursesver="5.7"
 mkdir -p $srcdir
 mkdir -p $builddir
 mkdir -p $archdir
+mkdir -p $datadir
 
 pushd $srcdir
 
-if [ "$nginxbuild" -eq "1" -o "$phpbuild" -eq "1" -o "$mysqlbuild" -eq "1" ]
+if [[ $nginxbuild == "1" || $phpbuild == "1" || $mysqlbuild == "1" ]]
 then
-	if [ -e zlib-${zlibver} ]
+	rm -rf zlib-${zlibver}
+
+	pushd $archdir
+		wget -c http://zlib.net/zlib-${zlibver}.tar.gz
+	popd
+
+	tar -xzf ${archdir}zlib-${zlibver}.tar.gz
+
+	if [[ $phpbuild == "1" || $mysqlbuild == "1" ]]
 	then
-		pushd zlib-${zlibver}
-			make clean
-		popd
-	else
-		pushd $archdir
-			wget -c http://zlib.net/zlib-${zlibver}.tar.gz
-		popd
-		tar -xzf ${archdir}zlib-${zlibver}.tar.gz
-	fi
-	if [ "$phpbuild" -eq "1" -o "$mysqlbuild" -eq "1" ]
-	then
+		rm -rf ${builddir}other/zlib-${zlibver}
 		pushd zlib-${zlibver}
 			./configure --prefix=${builddir}other/zlib-${zlibver} && \
 			make && \
@@ -68,21 +68,19 @@ then
 	fi
 fi
 
-if [ "$nginxbuild" -eq "1" -o "$phpbuild" -eq "1" ]
+if [[ $nginxbuild == "1" || $phpbuild == "1" ]]
 then
-	if [ -e openssl-${opsslver} ]
+	rm -rf openssl-${opsslver}
+
+	pushd $archdir
+		wget -c http://www.openssl.org/source/openssl-${opsslver}.tar.gz
+	popd
+
+	tar -xzf ${archdir}openssl-${opsslver}.tar.gz
+
+	if [[ $phpbuild == "1" ]]
 	then
-		pushd openssl-${opsslver}
-			make clean
-		popd
-	else
-		pushd $archdir
-			wget -c http://www.openssl.org/source/openssl-${opsslver}.tar.gz
-		popd
-		tar -xzf ${archdir}openssl-${opsslver}.tar.gz
-	fi
-	if [ "$phpbuild" -eq "1" ]
-	then
+		rm -rf ${builddir}other/openssl-${opsslver}
 		pushd openssl-${opsslver}
 			./config --prefix=${builddir}other/openssl-${opsslver} \
 				--with-zlib-lib=${builddir}other/zlib-${zlibver}/lib \
@@ -98,17 +96,9 @@ then
 	fi
 fi
 #nginx
-if [ "$nginxbuild" -eq "1" ]
+if [[ $nginxbuild == "1" ]]
 then
-	if [ -e "nginx-${nginxver}" ]
-	then
-		echo "${srcdir}nginx-${nginxver} already exist"
-		exit 1
-	elif [ -e "${builddir}nginx-${nginxver}" ]
-	then
-		echo "${builddir}nginx-${nginxver} already exist"
-		exit 1
-	fi
+	rm -rf ${builddir}nginx-${nginxver} nginx-${nginxver} pcre-${pcrever}
 
 	pushd $archdir
 		wget -c http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz
@@ -117,6 +107,10 @@ then
 
 	tar -xzf ${archdir}nginx-${nginxver}.tar.gz
 	tar -xzf ${archdir}pcre-${pcrever}.tar.gz
+
+	mkdir -p ${datadir}nginx
+	mkdir -p ${datadir}nginx/conf
+	mkdir -p ${datadir}nginx/log
 
 	pushd nginx-${nginxver}/
 		./configure --prefix=${builddir}nginx-${nginxver} \
@@ -131,12 +125,20 @@ then
 			--without-mail_pop3_module \
 			--without-mail_imap_module \
 			--without-mail_smtp_module \
+			--conf-path=${datadir}nginx/conf/nginx.conf \
+			--error-log-path=${datadir}nginx/log/error.log \
+			--pid-path=${datadir}nginx/log/nginx.pid \
+			--lock-path=${datadir}nginx/log/nginx.lock \
+			--http-log-path=${datadir}nginx/log/access.log \
+			--http-client-body-temp-path=${datadir}nginx/client_body_temp \
+			--http-proxy-temp-path=${datadir}nginx/proxy_temp \
+			--http-fastcgi-temp-path=${datadir}nginx/fastcgi_temp \
 			--with-pcre=${srcdir}/pcre-${pcrever} \
 			--with-zlib=${srcdir}/zlib-${zlibver} \
 			--with-openssl=${srcdir}/openssl-${opsslver} && \
 		make && \
 		make install || exit
-		if [ "$nginxconf" -eq "1" ]
+		if [[ $nginxconf == "1" ]]
 		then
 			echo "NGINX CONFIGURATION DOES NOT IMPLEMENTED"
 			#configure main and add configs for magento
@@ -145,17 +147,9 @@ then
 fi
 
 #mysql
-if [ "$mysqlbuild" -eq "1" ]
+if [[ $mysqlbuild == "1" ]]
 then
-	if [ -e "mysql-${mysqlfullver}" ]
-	then
-		echo "${srcdir}mysql-${mysqlfullver} already exist"
-		exit 1
-	elif [ -e "${builddir}mysql-${mysqlfullver}" ]
-	then
-		echo "${builddir}mysql-${mysqlfullver} already exist"
-		exit 1
-	fi
+	rm -rf mysql-${mysqlfullver} ${builddir}mysql-${mysqlfullver} ncurses-${ncursesver} ${builddir}other/ncurses-${ncursesver}
 
 	pushd ${archdir}
 		wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/
@@ -171,7 +165,7 @@ then
 
 	tar -xzf ${archdir}mysql-${mysqlfullver}.tar.gz
 
-	export mysqldatadir=${builddir}mysql-data/ #export for mysql.conf.sh
+	export mysqldatadir=${datadir}mysql/ #export for mysql.conf.sh
 	export mysqlinstalldir=${builddir}mysql-${mysqlfullver}/ #export for mysql.conf.sh
 
 	pushd  mysql-${mysqlfullver}
@@ -193,7 +187,7 @@ then
 				--with-unix-socket-path=${mysqldatadir}/var/mysql.sock && \
 		make && \
 		make install || exit
-		if [ "$mysqlconf" -eq "1" ]
+		if [[ $mysqlconf == "1" ]]
 		then
 			mkdir -p ${mysqldatadir}/etc/
 			mkdir -p ${mysqldatadir}/tmp/
@@ -209,22 +203,23 @@ then
 fi
 
 #php
-if [ "$phpbuild" -eq "1" ]
+if [[ $phpbuild == "1" ]]
 then
 	if [ -z "`which autoconf`" -o -n "`autoconf --version 2>/dev/null | head -n 1 | tr -d '\n' | sed 's/Autoconf version [2-9]\.[1-9][3-9]//'`" ]
 	then
 		echo "Need autoconf version >= 2.13"
 		exit
 	fi
-	if [ -e "php-${phpver}" ]
-	then
-		echo "${srcdir}php-${phpver} already exist"
-		exit 1
-	elif [ -e "${builddir}php-${phpver}" ]
-	then
-		echo "${builddir}php-${phpver} already exist"
-		exit 1
-	fi
+
+	rm -rf libpng-${pngver} ${builddir}other/libpng-${pngver} \
+		jpeg-${jpegver} ${builddir}other/libjpeg-${jpegver} \
+		libxml2-${libxmlver} ${builddir}other/libxml2-${libxmlver} \
+		mhash-${mhashver} ${builddir}other/libmcrypt-${mcryptver} \
+		curl-${curlver} ${builddir}other/curl-${curlver} \
+		php-${phpver} ${builddir}php-${phpver} \
+		libmcrypt-${mcryptver} ${builddir}other/libmcrypt-${mcryptver} \
+		php-${phpver}-fpm-${phpfpmver}.diff eaccelerator-${eaccver} 
+
 	pushd ${archdir}
 		wget -c http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror
 		wget -c http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2
@@ -233,7 +228,6 @@ then
 		wget -c http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download
 		wget -c http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download
 		wget -c http://fr.rpmfind.net/pub/libxml/libxml2-${libxmlver}.tar.gz
-		wget -c http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${iconvver}.tar.gz
 		wget -c http://www.ijg.org/files/jpegsrc.v${jpegver}.tar.gz
 		wget -c http://sourceforge.net/projects/libpng/files/01-libpng-master/${pngver}/libpng-${pngver}.tar.gz/download
 	popd
@@ -252,10 +246,6 @@ then
 		./configure --prefix=${builddir}other/libjpeg-${jpegver} && \
 		make && \
 		make install || exit
-	popd
-
-	tar -xzf ${archdir}libpng-${pngver}.tar.gz
-	pushd libpng-${pngver}
 	popd
 
 	tar -xzf ${archdir}libxml2-${libxmlver}.tar.gz
@@ -329,6 +319,8 @@ then
 	gzip -fdc ${archdir}php-${phpver}-fpm-${phpfpmver}.diff.gz > php-${phpver}-fpm-${phpfpmver}.diff
 	tar -xjf ${archdir}eaccelerator-${eaccver}.tar.bz2
 
+	mkdir -p ${datadir}php
+
 	pushd php-${phpver}
 		patch -p1 < ${srcdir}/php-${phpver}-fpm-${phpfpmver}.diff
 		cp -r ${srcdir}/eaccelerator-${eaccver} ext/eaccelerator
@@ -357,6 +349,11 @@ then
 			--with-jpeg-dir=${builddir}other/libjpeg-${jpegver} \
 			--with-png-dir=${builddir}other/libpng-${pngver} \
 			--enable-mbstring \
+			--with-fpm-log=${datadir}php/log/php-fpm.log \
+			--with-fpm-pid=${datadir}php/log/php-fpm.pid \
+			--sysconfdir=${datadir}php/conf \
+			--without-pear \
+			--with-config-file-path=${datadir}php/conf \
 			--enable-xml \
 			--enable-libxml \
 			--with-xml-config=${builddir}other/libxml2-${libxmlver}/bin/xml2-config \
@@ -364,7 +361,7 @@ then
 		make &&	\
 		make test && \
 		make install || exit
-		if [ "$phpconf" -eq "1" ]
+		if [[ $phpconf == "1" ]]
 		then
 			export phpdir=${builddir}php-${phpver}/
 			${scriptdir}/conf/php-fpm.conf.sh > ${phpdir}etc/php-fpm.conf
