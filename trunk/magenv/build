@@ -9,9 +9,9 @@ mysqlbuild=1
 phpbuild=1
 
 #rebuild
-nginxreb=0
+nginxreb=1
 mysqlreb=0
-phpreb=1
+phpreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -73,7 +73,7 @@ then
 	then
 		echo -n "Clean zlib-${zlibver}..." | tee -a ${buildlog}zlib-${zlibver}.log
 		cd zlib-${zlibver}
-			make clean >> ${buildlog}zlib-${zlibver}.log 2>&1
+			make distclean >> ${buildlog}zlib-${zlibver}.log 2>&1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}zlib-${zlibver}.log
 	else
@@ -90,13 +90,13 @@ then
 		echo -n "Make zlib-${zlibver}..." | tee -a ${buildlog}zlib-${zlibver}.log
 		if [ -e ${builddir}other/zlib-${zlibver} ]
 		then
-			mv ${builddir}other/zlib-${zlibver} `mktemp -dp $oldbuilddir zlib-${zlibver}.XX` >> ${buildlog}zlib-${zlibver}.log 2>&1
+			mv ${builddir}other/zlib-${zlibver} `mktemp -dp $oldbuilddir zlib-${zlibver}.XXX` >> ${buildlog}zlib-${zlibver}.log 2>&1
 		fi
 		cd zlib-${zlibver}
 			./configure --prefix=${builddir}other/zlib-${zlibver} >> ${buildlog}zlib-${zlibver}.log 2>&1 && \
 			make >> ${buildlog}zlib-${zlibver}.log 2>&1 && \
 			make install >> ${buildlog}zlib-${zlibver}.log 2>&1 && \
-			make clean >> ${buildlog}zlib-${zlibver}.log 2>&1 || exit 1 #clean for nginx
+			make distclean >> ${buildlog}zlib-${zlibver}.log 2>&1 || exit 1 #clean for nginx
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}zlib-${zlibver}.log
 	fi
@@ -112,7 +112,7 @@ then
 	then
 		echo -n "Clean openssl-${opsslver}..." | tee -a ${buildlog}openssl-${opsslver}.log
 		cd openssl-${opsslver}
-			make clean >> ${buildlog}openssl-${opsslver}.log 2>&1
+			make dclean >> ${buildlog}openssl-${opsslver}.log 2>&1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}openssl-${opsslver}.log
 	else
@@ -129,7 +129,7 @@ then
 		echo -n "Make openssl-${opsslver}..." | tee -a ${buildlog}openssl-${opsslver}.log
 		if [ -e ${builddir}other/openssl-${opsslver} ]
 		then
-			mv ${builddir}other/openssl-${opsslver} `mktemp -dp $oldbuilddir openssl-${opsslver}.XX` >> ${buildlog}openssl-${opsslver}.log 2>&1
+			mv ${builddir}other/openssl-${opsslver} `mktemp -dp $oldbuilddir openssl-${opsslver}.XXX` >> ${buildlog}openssl-${opsslver}.log 2>&1
 		fi
 		cd openssl-${opsslver}
 			./config --prefix=${builddir}other/openssl-${opsslver} \
@@ -141,7 +141,7 @@ then
 			make >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
 			make test >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
 			make install >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
-			make clean >> ${buildlog}openssl-${opsslver}.log 2>&1 || exit 1 #clean for nginx
+			make dclean >> ${buildlog}openssl-${opsslver}.log 2>&1 || exit 1 #clean for nginx
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}openssl-${opsslver}.log
 	fi
@@ -154,7 +154,7 @@ then
 	echo "START BUILD nginx-${nginxver}" | tee -a ${buildlog}nginx-${nginxver}.log
 	if [ -e ${builddir}nginx-${nginxver} ]
 	then
-		mv ${builddir}nginx-${nginxver} `mktemp -dp $oldbuilddir nginx-${nginxver}.XX` >> ${buildlog}nginx-${nginxver}.log 2>&1
+		mv ${builddir}nginx-${nginxver} `mktemp -dp $oldbuilddir nginx-${nginxver}.XXX` >> ${buildlog}nginx-${nginxver}.log 2>&1
 	fi
 	if [ -e nginx-${nginxver} ]
 	then
@@ -171,12 +171,11 @@ then
 		tar -xzvf ${archdir}nginx-${nginxver}.tar.gz >> ${buildlog}nginx-${nginxver}.log 2>&1
 		echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
 	fi
-
 	if [ -e pcre-${pcrever} ]
 	then
 		echo -n "Clean pcre-${pcrever}..." | tee -a ${buildlog}pcre-${pcrever}.log
 		cd pcre-${pcrever}
-			make clean >> ${buildlog}pcre-${pcrever}.log 2>&1
+			make distclean >> ${buildlog}pcre-${pcrever}.log 2>&1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}pcre-${pcrever}.log
 	else
@@ -187,11 +186,6 @@ then
 		tar -xzvf ${archdir}pcre-${pcrever}.tar.gz >> ${buildlog}pcre-${pcrever}.log 2>&1
 		echo "DONE" | tee -a ${buildlog}pcre-${pcrever}.log
 	fi
-
-	mkdir -p ${datadir}nginx
-	mkdir -p ${datadir}nginx/conf
-	mkdir -p ${datadir}nginx/log
-
 	echo -n "Make nginx-${nginxver}..." | tee -a ${buildlog}nginx-${nginxver}.log
 	cd nginx-${nginxver}/
 		./configure --prefix=${builddir}nginx-${nginxver} \
@@ -237,13 +231,13 @@ then
 		echo "START BUILD ncurses-${ncursesver}" | tee -a ${buildlog}ncurses-${ncursesver}.log
 		if [ -e ${builddir}other/ncurses-${ncursesver} ]
 		then
-			mv ${builddir}other/ncurses-${ncursesver} `mktemp -dp $oldbuilddir ncurses-${ncursesver}.XX` >> ${buildlog}ncurses-${ncursesver}.log 2>&1
+			mv ${builddir}other/ncurses-${ncursesver} `mktemp -dp $oldbuilddir ncurses-${ncursesver}.XXX` >> ${buildlog}ncurses-${ncursesver}.log 2>&1
 		fi
 		if [ -e ncurses-${ncursesver} ]
 		then
 			echo -n "Clean ncurses-${ncursesver}..." | tee -a ${buildlog}ncurses-${ncursesver}.log
 			cd ncurses-${ncursesver}
-				make clean >> ${buildlog}ncurses-${ncursesver}.log 2>&1
+				make distclean >> ${buildlog}ncurses-${ncursesver}.log 2>&1
 			cd $OLDPWD
 			echo "DONE" | tee -a ${buildlog}ncurses-${ncursesver}.log
 		else
@@ -266,7 +260,7 @@ then
 
 	if [ -e ${builddir}mysql-${mysqlfullver} ]
 	then
-		mv ${builddir}mysql-${mysqlfullver} `mktemp -dp $oldbuilddir mysql-${mysqlfullver}.XX` >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
+		mv ${builddir}mysql-${mysqlfullver} `mktemp -dp $oldbuilddir mysql-${mysqlfullver}.XXX` >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
 	fi
 
 	echo "START BUILD mysql-${mysqlfullver}" | tee -a ${buildlog}mysql-${mysqlfullver}.log
@@ -274,7 +268,7 @@ then
 	then
 		echo -n "Clean mysql-${mysqlfullver}..." | tee -a ${buildlog}mysql-${mysqlfullver}.log
 		cd mysql-${mysqlfullver}
-			make clean >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
+			make distclean >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 	else
@@ -292,8 +286,8 @@ then
 	echo -n "Make mysql-${mysqlfullver}..." | tee -a ${buildlog}mysql-${mysqlfullver}.log
 	cd  mysql-${mysqlfullver}
 		CFLAGS="-O3" \
-			CXX=gcc \
-			CXXFLAGS="-O3 -felide-constructors -fno-exceptions -fno-rtti" \
+			CXXX=gcc \
+			CXXXFLAGS="-O3 -felide-constructors -fno-exceptions -fno-rtti" \
 			LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib" \
 			./configure --prefix=${mysqlinstalldir} \
 				--with-mysqld-ldflags=-all-static \
@@ -340,30 +334,30 @@ then
 		echo "START BUILD libpng-${pngver}" | tee -a ${buildlog}libpng-${pngver}.log
 		if [ -e ${builddir}other/libpng-${pngver} ]
 		then
-			mv ${builddir}other/libpng-${pngver} `mktemp -dp $oldbuilddir libpng-${pngver}.XX` >> ${buildlog}libpng-${pngver}.log 2>&1
+			mv ${builddir}other/libpng-${pngver} `mktemp -dp $oldbuilddir libpng-${pngver}.XXX` >> ${buildlog}libpng-${pngver}.log 2>&1
 		fi
 		if [ -e libpng-${pngver} ]
 		then
 			echo -n "Clean libpng-${pngver}..." | tee -a ${buildlog}libpng-${pngver}.log
 			cd libpng-${pngver}
-				make clean >> ${buildlog}.log 2>&1
+				make distclean >> ${buildlog}libpng-${pngver}.log 2>&1
 			cd $OLDPWD
 			echo "DONE" | tee -a ${buildlog}libpng-${pngver}.log
 		else
 			echo -n "Wget and untar libpng-${pngver}..." | tee -a ${buildlog}libpng-${pngver}.log
 			cd ${archdir}
-				wget -c http://sourceforge.net/projects/libpng/files/01-libpng-master/${pngver}/libpng-${pngver}.tar.gz/download >> ${buildlog}.log 2>&1
+				wget -c http://sourceforge.net/projects/libpng/files/01-libpng-master/${pngver}/libpng-${pngver}.tar.gz/download >> ${buildlog}libpng-${pngver}.log 2>&1
 			cd $OLDPWD
-			tar -xzf ${archdir}libpng-${pngver}.tar.gz >> ${buildlog}.log 2>&1
+			tar -xzf ${archdir}libpng-${pngver}.tar.gz >> ${buildlog}libpng-${pngver}.log 2>&1
 			echo "DONE" | tee -a ${buildlog}libpng-${pngver}.log
 		fi
 		echo -n "Make libpng-${pngver}..." | tee -a ${buildlog}libpng-${pngver}.log
 		cd libpng-${pngver}
 			CFLAGS="-I${builddir}other/zlib-${zlibver}/include" \
 			LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib -L${builddir}other/zlib-${zlibver}/lib" \
-				./configure --prefix=${builddir}other/libpng-${pngver} >> ${buildlog}.log 2>&1 && \
-			make >> ${buildlog}.log 2>&1 && \
-			make install >> ${buildlog}.log 2>&1 || exit 1
+				./configure --prefix=${builddir}other/libpng-${pngver} >> ${buildlog}libpng-${pngver}.log 2>&1 && \
+			make >> ${buildlog}libpng-${pngver}.log 2>&1 && \
+			make install >> ${buildlog}libpng-${pngver}.log 2>&1 || exit 1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}libpng-${pngver}.log
 		echo "DONE BUILD libpng-${pngver}" | tee -a ${buildlog}libpng-${pngver}.log
@@ -373,28 +367,28 @@ then
 		echo "START BUILD libjpeg-${jpegver}" | tee -a ${buildlog}libjpeg-${jpegver}.log
 		if [ -e ${builddir}other/libjpeg-${jpegver} ]
 		then
-			mv ${builddir}other/libjpeg-${jpegver} `mktemp -dp $oldbuilddir libjpeg-${jpegver}.XX` >> ${buildlog}libjpeg-${jpegver}.log 2>&1
+			mv ${builddir}other/libjpeg-${jpegver} `mktemp -dp $oldbuilddir libjpeg-${jpegver}.XXX` >> ${buildlog}libjpeg-${jpegver}.log 2>&1
 		fi
 		if [ -e jpeg-${jpegver} ]
 		then
 			echo -n "Clean libjpeg-${jpegver}..." | tee -a ${buildlog}libjpeg-${jpegver}.log
 			cd jpeg-${jpegver}
-				make clean >> ${buildlog}.log 2>&1
+				make distclean >> ${buildlog}libjpeg-${jpegver}.log 2>&1
 			cd $OLDPWD
 			echo "DONE" | tee -a ${buildlog}libjpeg-${jpegver}.log
 		else
 			echo -n "Wget and untar libjpeg-${jpegver}..." | tee -a ${buildlog}libjpeg-${jpegver}.log
 			cd ${archdir}
-				wget -c http://www.ijg.org/files/jpegsrc.v${jpegver}.tar.gz >> ${buildlog}.log 2>&1
+				wget -c http://www.ijg.org/files/jpegsrc.v${jpegver}.tar.gz >> ${buildlog}libjpeg-${jpegver}.log 2>&1
 			cd $OLDPWD
-			tar -xzf ${archdir}jpegsrc.v${jpegver}.tar.gz >> ${buildlog}.log 2>&1
+			tar -xzf ${archdir}jpegsrc.v${jpegver}.tar.gz >> ${buildlog}libjpeg-${jpegver}.log 2>&1
 			echo "DONE" | tee -a ${buildlog}libjpeg-${jpegver}.log
 		fi
 		echo -n "Make libjpeg-${jpegver}..." | tee -a ${buildlog}libjpeg-${jpegver}.log
 		cd jpeg-${jpegver}
-			./configure --prefix=${builddir}other/libjpeg-${jpegver} >> ${buildlog}.log 2>&1 && \
-			make >> ${buildlog}.log 2>&1 && \
-			make install >> ${buildlog}.log 2>&1 || exit 1
+			./configure --prefix=${builddir}other/libjpeg-${jpegver} >> ${buildlog}libjpeg-${jpegver}.log 2>&1 && \
+			make >> ${buildlog}libjpeg-${jpegver}.log 2>&1 && \
+			make install >> ${buildlog}libjpeg-${jpegver}.log 2>&1 || exit 1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}libjpeg-${jpegver}.log
 		echo "DONE BUILD libjpeg-${jpegver}" | tee -a ${buildlog}libjpeg-${jpegver}.log
@@ -404,30 +398,30 @@ then
 		echo "START BUILD libxml2-${libxmlver}" | tee -a ${buildlog}libxml2-${libxmlver}.log
 		if [ -e ${builddir}other/libxml2-${libxmlver} ]
 		then
-			mv ${builddir}other/libxml2-${libxmlver} `mktemp -dp $oldbuilddir libxml2-${libxmlver}.XX` >> ${buildlog}libxml2-${libxmlver}.log 2>&1
+			mv ${builddir}other/libxml2-${libxmlver} `mktemp -dp $oldbuilddir libxml2-${libxmlver}.XXX` >> ${buildlog}libxml2-${libxmlver}.log 2>&1
 		fi
 		if [ -e libxml2-${libxmlver} ]
 		then
 			echo -n "Clean libxml2-${libxmlver}..." | tee -a ${buildlog}libxml2-${libxmlver}.log
 			cd libxml2-${libxmlver}
-				make clean >> ${buildlog}.log 2>&1
+				make distclean >> ${buildlog}libxml2-${libxmlver}.log 2>&1
 			cd $OLDPWD
 			echo "DONE" | tee -a ${buildlog}libxml2-${libxmlver}.log
 		else
 			echo -n "Wget and untar libxml2-${libxmlver}..." | tee -a ${buildlog}libxml2-${libxmlver}.log
 			cd ${archdir}
-				wget -c http://fr.rpmfind.net/pub/libxml/libxml2-${libxmlver}.tar.gz >> ${buildlog}.log 2>&1
+				wget -c http://fr.rpmfind.net/pub/libxml/libxml2-${libxmlver}.tar.gz >> ${buildlog}libxml2-${libxmlver}.log 2>&1
 			cd $OLDPWD
-			tar -xzf ${archdir}libxml2-${libxmlver}.tar.gz >> ${buildlog}.log 2>&1
+			tar -xzf ${archdir}libxml2-${libxmlver}.tar.gz >> ${buildlog}libxml2-${libxmlver}.log 2>&1
 			echo "DONE"
 		fi
 		echo -n "Make libxml2-${libxmlver}..." | tee -a ${buildlog}libxml2-${libxmlver}.log
 		cd libxml2-${libxmlver}
 			LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib-${zlibver}/lib" ./configure \
 				--prefix=${builddir}other/libxml2-${libxmlver} \
-				--with-zlib=${builddir}other/zlib-${zlibver} >> ${buildlog}.log 2>&1 && \
-			make >> ${buildlog}.log 2>&1 && \
-			make install >> ${buildlog}.log 2>&1 || exit 1
+				--with-zlib=${builddir}other/zlib-${zlibver} >> ${buildlog}libxml2-${libxmlver}.log 2>&1 && \
+			make >> ${buildlog}libxml2-${libxmlver}.log 2>&1 && \
+			make install >> ${buildlog}libxml2-${libxmlver}.log 2>&1 || exit 1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}libxml2-${libxmlver}.log
 		echo "DONE BUILD libxml2-${libxmlver}" | tee -a ${buildlog}libxml2-${libxmlver}.log
@@ -437,28 +431,28 @@ then
 		echo "START BUILD mhash-${mhashver}" | tee -a ${buildlog}mhash-${mhashver}.log
 		if [ -e ${builddir}other/mhash-${mhashver} ]
 		then
-			mv ${builddir}other/mhash-${mhashver} `mktemp -dp $oldbuilddir mhash-${mhashver}.XX` >> ${buildlog}mhash-${mhashver}.log 2>&1
+			mv ${builddir}other/mhash-${mhashver} `mktemp -dp $oldbuilddir mhash-${mhashver}.XXX` >> ${buildlog}mhash-${mhashver}.log 2>&1
 		fi
 		if [ -e mhash-${mhashver} ]
 		then
 			echo -n "Clean mhash-${mhashver}..." | tee -a ${buildlog}mhash-${mhashver}.log
 			cd mhash-${mhashver}
-				make clean >> ${buildlog}.log 2>&1
+				make distclean >> ${buildlog}mhash-${mhashver}.log 2>&1
 			cd $OLDPWD
 			echo "DONE" | tee -a ${buildlog}mhash-${mhashver}.log
 		else
 			echo -n "Wget and untar mhash-${mhashver}..." | tee -a ${buildlog}mhash-${mhashver}.log
 			cd ${archdir}
-				wget -c http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download >> ${buildlog}.log 2>&1
+				wget -c http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download >> ${buildlog}mhash-${mhashver}.log 2>&1
 			cd $OLDPWD
-			tar -xzf ${archdir}mhash-${mhashver}.tar.gz >> ${buildlog}.log 2>&1
+			tar -xzf ${archdir}mhash-${mhashver}.tar.gz >> ${buildlog}mhash-${mhashver}.log 2>&1
 			echo "DONE" | tee -a ${buildlog}mhash-${mhashver}.log
 		fi
 		echo -n "Make mhash-${mhashver}..." | tee -a ${buildlog}mhash-${mhashver}.log
 		cd mhash-${mhashver}
-			./configure --prefix=${builddir}other/mhash-${mhashver} >> ${buildlog}.log 2>&1 && \
-			make >> ${buildlog}.log 2>&1 && \
-			make install >> ${buildlog}.log 2>&1 || exit 1
+			./configure --prefix=${builddir}other/mhash-${mhashver} >> ${buildlog}mhash-${mhashver}.log 2>&1 && \
+			make >> ${buildlog}mhash-${mhashver}.log 2>&1 && \
+			make install >> ${buildlog}mhash-${mhashver}.log 2>&1 || exit 1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}mhash-${mhashver}.log
 		echo "DONE BUILD mhash-${mhashver}" | tee -a ${buildlog}mhash-${mhashver}.log
@@ -468,28 +462,28 @@ then
 		echo "START BUILD libmcrypt-${mcryptver}" | tee -a ${buildlog}libmcrypt-${mcryptver}.log
 		if [ -e ${builddir}other/libmcrypt-${mcryptver} ]
 		then
-			mv ${builddir}other/libmcrypt-${mcryptver} `mktemp -dp $oldbuilddir libmcrypt-${mcryptver}.XX` >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1
+			mv ${builddir}other/libmcrypt-${mcryptver} `mktemp -dp $oldbuilddir libmcrypt-${mcryptver}.XXX` >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1
 		fi
 		if [ -e libmcrypt-${mcryptver} ]
 		then
 			echo -n "Clean libmcrypt-${mcryptver}..." | tee -a ${buildlog}libmcrypt-${mcryptver}.log
 			cd libmcrypt-${mcryptver}
-				make clean >> ${buildlog}.log 2>&1
+				make distclean >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1
 			cd $OLDPWD
 			echo "DONE" | tee -a ${buildlog}libmcrypt-${mcryptver}.log
 		else
 			echo -n "Wget and untar libmcrypt-${mcryptver}..." | tee -a ${buildlog}libmcrypt-${mcryptver}.log
 			cd ${archdir}
-				wget -c http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download >> ${buildlog}.log 2>&1
+				wget -c http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1
 			cd $OLDPWD
-			tar -xzf ${archdir}libmcrypt-${mcryptver}.tar.gz >> ${buildlog}.log 2>&1
+			tar -xzf ${archdir}libmcrypt-${mcryptver}.tar.gz >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1
 			echo "DONE" | tee -a ${buildlog}libmcrypt-${mcryptver}.log
 		fi
 		echo -n "Make libmcrypt-${mcryptver}..." | tee -a ${buildlog}libmcrypt-${mcryptver}.log
 		cd libmcrypt-${mcryptver}
-			./configure --prefix=${builddir}other/libmcrypt-${mcryptver} >> ${buildlog}.log 2>&1 && \
-			make >> ${buildlog}.log 2>&1 && \
-			make install >> ${buildlog}.log 2>&1 || exit 1
+			./configure --prefix=${builddir}other/libmcrypt-${mcryptver} >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1 && \
+			make >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1 && \
+			make install >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1 || exit 1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}libmcrypt-${mcryptver}.log
 		echo "DONE BUILD libmcrypt-${mcryptver}" | tee -a ${buildlog}libmcrypt-${mcryptver}.log
@@ -499,21 +493,21 @@ then
 		echo "START BUILD curl-${curlver}" | tee -a ${buildlog}curl-${curlver}.log
 		if [ -e ${builddir}other/curl-${curlver} ]
 		then
-			mv ${builddir}other/curl-${curlver} `mktemp -dp $oldbuilddir curl-${curlver}.XX` >> ${buildlog}curl-${curlver}.log 2>&1
+			mv ${builddir}other/curl-${curlver} `mktemp -dp $oldbuilddir curl-${curlver}.XXX` >> ${buildlog}curl-${curlver}.log 2>&1
 		fi
 		if [ -e curl-${curlver} ]
 		then
 			echo -n "Clean curl-${curlver}..." | tee -a ${buildlog}curl-${curlver}.log
 			cd curl-${curlver}
-				make clean >> ${buildlog}.log 2>&1
+				make distclean >> ${buildlog}curl-${curlver}.log 2>&1
 			cd $OLDPWD
 			echo "DONE" | tee -a ${buildlog}curl-${curlver}.log
 		else
 			echo -n "Wget and untar curl-${curlver}..." | tee -a ${buildlog}curl-${curlver}.log
 			cd ${archdir}
-				wget -c http://curl.haxx.se/download/curl-${curlver}.tar.gz >> ${buildlog}.log 2>&1
+				wget -c http://curl.haxx.se/download/curl-${curlver}.tar.gz >> ${buildlog}curl-${curlver}.log 2>&1
 			cd $OLDPWD
-			tar -xzf ${archdir}curl-${curlver}.tar.gz >> ${buildlog}.log 2>&1
+			tar -xzf ${archdir}curl-${curlver}.tar.gz >> ${buildlog}curl-${curlver}.log 2>&1
 			echo "DONE" | tee -a ${buildlog}curl-${curlver}.log
 		fi
 		echo -n "Make curl-${curlver}..." | tee -a ${buildlog}curl-${curlver}.log
@@ -555,20 +549,24 @@ then
 				--without-nss \
 				--without-ca-bundle \
 				--without-ca-path \
-				--without-libidn >> ${buildlog}.log 2>&1 && \
-			make >> ${buildlog}.log 2>&1 &&\
-			make install >> ${buildlog}.log 2>&1 || exit 1
+				--without-libidn >> ${buildlog}curl-${curlver}.log 2>&1 && \
+			make >> ${buildlog}curl-${curlver}.log 2>&1 &&\
+			make install >> ${buildlog}curl-${curlver}.log 2>&1 || exit 1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}curl-${curlver}.log
 		echo "DONE BUILD curl-${curlver}" | tee -a ${buildlog}curl-${curlver}.log
 	fi
 
 	echo "START BUILD php-${phpver}" | tee -a ${buildlog}php-${phpver}.log
+	if [ -e ${builddir}php-${phpver} ]
+	then
+			mv ${builddir}php-${phpver} `mktemp -dp $oldbuilddir php-${phpver}.XXX` >> ${buildlog}php-${phpver}.log 2>&1
+	fi
 	if [ -e php-${phpver} ]
 	then
 		echo -n "Clean php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 		cd php-${phpver}
-			make clean >> ${buildlog}.log 2>&1
+			make distclean >> ${buildlog}php-${phpver}.log 2>&1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 	else
@@ -576,24 +574,24 @@ then
 		then
 			echo -n "Wget and untar eaccelerator-${eaccver}..." | tee -a ${buildlog}php-${phpver}.log
 			cd ${archdir}
-				wget -c http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2 >> ${buildlog}.log 2>&1
+				wget -c http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2 >> ${buildlog}php-${phpver}.log 2>&1
 			cd $OLDPWD
-			tar -xjf ${archdir}eaccelerator-${eaccver}.tar.bz2 >> ${buildlog}.log 2>&1
+			tar -xjf ${archdir}eaccelerator-${eaccver}.tar.bz2 >> ${buildlog}php-${phpver}.log 2>&1
 			echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 		fi
 		echo -n "Wget and untar php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 		cd ${archdir}
-			wget -c http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror >> ${buildlog}.log 2>&1
-			wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz >> ${buildlog}.log 2>&1
+			wget -c http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror >> ${buildlog}php-${phpver}.log 2>&1
+			wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz >> ${buildlog}php-${phpver}.log 2>&1
 		cd $OLDPWD
-		tar -xzf ${archdir}php-${phpver}.tar.gz >> ${buildlog}.log 2>&1
+		tar -xzf ${archdir}php-${phpver}.tar.gz >> ${buildlog}php-${phpver}.log 2>&1
 		gzip -fdc ${archdir}php-${phpver}-fpm-${phpfpmver}.diff.gz > php-${phpver}-fpm-${phpfpmver}.diff
 		echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 		echo -n "Patch and buildconf php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 		cd php-${phpver}
-			patch -p1 < ${srcdir}/php-${phpver}-fpm-${phpfpmver}.diff >> ${buildlog}.log 2>&1
+			patch -p1 < ${srcdir}/php-${phpver}-fpm-${phpfpmver}.diff >> ${buildlog}php-${phpver}.log 2>&1
 			cp -r ../eaccelerator-${eaccver} ext/eaccelerator
-			./buildconf --force >> ${buildlog}.log 2>&1
+			./buildconf --force >> ${buildlog}php-${phpver}.log 2>&1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 	fi
@@ -601,6 +599,11 @@ then
 	echo -n "Make php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 	cd php-${phpver}
 		./configure --prefix=${builddir}php-${phpver} \
+			--with-fpm-log=${datadir}php/log/php-fpm.log \
+			--with-fpm-pid=${datadir}php/log/php-fpm.pid \
+			--with-config-file-path=${datadir}php/conf \
+			--sysconfdir=${datadir}php/conf \
+			--with-fpm-conf=${datadir}php/conf/php-fpm.conf \
 			--disable-all \
 			--enable-fastcgi \
 			--enable-fpm \
@@ -624,18 +627,14 @@ then
 			--with-jpeg-dir=${builddir}other/libjpeg-${jpegver} \
 			--with-png-dir=${builddir}other/libpng-${pngver} \
 			--enable-mbstring \
-			--with-fpm-log=${datadir}php/log/php-fpm.log \
-			--with-fpm-pid=${datadir}php/log/php-fpm.pid \
-			--sysconfdir=${datadir}php/conf \
 			--without-pear \
-			--with-config-file-path=${datadir}php/conf \
 			--enable-xml \
 			--enable-libxml \
 			--with-xml-config=${builddir}other/libxml2-${libxmlver}/bin/xml2-config \
-			--with-libxml-dir=${builddir}other/libxml2-${libxmlver} >> ${buildlog}.log 2>&1 && \
-		make >> ${buildlog}.log 2>&1 &&	\
-#		make test >> ${buildlog}.log 2>&1 && \
-		make install >> ${buildlog}.log 2>&1 || exit 1
+			--with-libxml-dir=${builddir}other/libxml2-${libxmlver} >> ${buildlog}php-${phpver}.log 2>&1 && \
+		make >> ${buildlog}php-${phpver}.log 2>&1 &&	\
+#		make test >> ${buildlog}php-${phpver}.log 2>&1 && \
+		make install >> ${buildlog}php-${phpver}.log 2>&1 || exit 1
 		if [ $phpconf = "1" ]
 		then
 			export phpdir=${builddir}php-${phpver}/
