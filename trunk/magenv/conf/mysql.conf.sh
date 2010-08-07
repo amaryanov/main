@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 cat <<EOF
 #start server: ${mysqlinstalldir}bin/mysqld_safe --defaults-file=${mysqldatadir}etc/my.cnf &
