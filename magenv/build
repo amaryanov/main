@@ -4,8 +4,8 @@
 
 #####SCRIPT CONFIG#####
 #what to build
-nginxbuild=0
-mysqlbuild=0
+nginxbuild=1
+mysqlbuild=1
 phpbuild=1
 
 #rebuild
@@ -133,10 +133,10 @@ then
 		fi
 		cd openssl-${opsslver}
 			./config --prefix=${builddir}other/openssl-${opsslver} \
-				--with-zlib-lib=${builddir}other/openssl-${opsslver}/lib \
-				--with-zlib-include=${builddir}other/openssl-${opsslver}/include \
+				--with-zlib-lib=${builddir}other/zlib-${zlibver}/lib \
+				--with-zlib-include=${builddir}other/zlib-${zlibver}/include \
 				-Wl,-rpath \
-				-Wl,${builddir}other/openssl-${opsslver}/lib \
+				-Wl,${builddir}other/zlib-${zlibver}/lib \
 				threads zlib shared >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
 			make >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
 			make test >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
