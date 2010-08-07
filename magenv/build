@@ -79,7 +79,7 @@ then
 	else
 		echo -n "Wget and untar zlib-${zlibver}..." | tee -a ${buildlog}zlib-${zlibver}.log
 		cd $archdir
-			wget -qc http://zlib.net/zlib-${zlibver}.tar.gz >> ${buildlog}zlib-${zlibver}.log 2>&1
+			wget -c http://zlib.net/zlib-${zlibver}.tar.gz >> ${buildlog}zlib-${zlibver}.log 2>&1
 		cd $OLDPWD
 		tar -xzvf ${archdir}zlib-${zlibver}.tar.gz >> ${buildlog}zlib-${zlibver}.log 2>&1
 		echo "DONE" | tee -a ${buildlog}zlib-${zlibver}.log
@@ -118,7 +118,7 @@ then
 	else
 		echo -n "Wget and untar openssl-${opsslver}..." | tee -a ${buildlog}openssl-${opsslver}.log
 		cd $archdir
-			wget -qc http://www.openssl.org/source/openssl-${opsslver}.tar.gz >> ${buildlog}openssl-${opsslver}.log 2>&1
+			wget -c http://www.openssl.org/source/openssl-${opsslver}.tar.gz >> ${buildlog}openssl-${opsslver}.log 2>&1
 		cd $OLDPWD
 		tar -xzvf ${archdir}openssl-${opsslver}.tar.gz >> ${buildlog}openssl-${opsslver}.log 2>&1
 		echo "DONE" | tee -a ${buildlog}openssl-${opsslver}.log
@@ -166,7 +166,7 @@ then
 	else
 		echo -n "Wget and untar nginx-${nginxver}..." | tee -a ${buildlog}nginx-${nginxver}.log
 		cd $archdir
-			wget -qc http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz >> ${buildlog}nginx-${nginxver}.log 2>&1
+			wget -c http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz >> ${buildlog}nginx-${nginxver}.log 2>&1
 		cd $OLDPWD
 		tar -xzvf ${archdir}nginx-${nginxver}.tar.gz >> ${buildlog}nginx-${nginxver}.log 2>&1
 		echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
@@ -182,7 +182,7 @@ then
 	else
 		echo -n "Wget and untar pcre-${pcrever}..." | tee -a ${buildlog}pcre-${pcrever}.log
 		cd $archdir
-			wget -qc http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz >> ${buildlog}pcre-${pcrever}.log 2>&1
+			wget -c http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz >> ${buildlog}pcre-${pcrever}.log 2>&1
 		cd $OLDPWD
 		tar -xzvf ${archdir}pcre-${pcrever}.tar.gz >> ${buildlog}pcre-${pcrever}.log 2>&1
 		echo "DONE" | tee -a ${buildlog}pcre-${pcrever}.log
@@ -249,7 +249,7 @@ then
 		else
 			echo -n "Wget and untar ncurses-${ncursesver}..." | tee -a ${buildlog}ncurses-${ncursesver}.log
 			cd ${archdir}
-				wget -qc http://ftp.gnu.org/pub/gnu/ncurses/ncurses-${ncursesver}.tar.gz >> ${buildlog}ncurses-${ncursesver}.log 2>&1
+				wget -c http://ftp.gnu.org/pub/gnu/ncurses/ncurses-${ncursesver}.tar.gz >> ${buildlog}ncurses-${ncursesver}.log 2>&1
 			cd $OLDPWD
 			tar -xzvf ${archdir}ncurses-${ncursesver}.tar.gz >> ${buildlog}ncurses-${ncursesver}.log 2>&1
 			echo "DONE" | tee -a ${buildlog}ncurses-${ncursesver}.log
@@ -280,7 +280,7 @@ then
 	else
 		echo -n "Wget and untar mysql-${mysqlfullver}..." | tee -a ${buildlog}mysql-${mysqlfullver}.log
 		cd ${archdir}
-			wget -qc http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/ >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
+			wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/ >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
 		cd $OLDPWD
 		tar -xzvf ${archdir}mysql-${mysqlfullver}.tar.gz >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
 		echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
