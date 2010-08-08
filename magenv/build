@@ -9,7 +9,7 @@ mysqlbuild=1
 phpbuild=1
 
 #rebuild
-nginxreb=1
+nginxreb=0
 mysqlreb=0
 phpreb=0
 zlibreb=0
