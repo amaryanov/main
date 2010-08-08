@@ -13,10 +13,10 @@ stop php-fpm: ${phpdir}sbin/php-fpm stop
 	<section name="global_options">
 
 		Pid file
-		<value name="pid_file">${phpdir}logs/php-fpm.pid</value>
+		<value name="pid_file">${phpdatadir}logs/php-fpm.pid</value>
 
 		Error log file
-		<value name="error_log">${phpdir}logs/php-fpm.log</value>
+		<value name="error_log">${phpdatadir}logs/php-fpm.log</value>
 
 		Log level
 		<value name="log_level">notice</value>
@@ -45,7 +45,7 @@ stop php-fpm: ${phpdir}sbin/php-fpm stop
 
 			Address to accept fastcgi requests on.
 			Valid syntax is 'ip.ad.re.ss:port' or just 'port' or '/path/to/unix/socket'
-			<value name="listen_address">${phpdir}var/php.sock</value>
+			<value name="listen_address">${phpdatadir}var/php.sock</value>
 
 			<value name="listen_options">
 
@@ -118,9 +118,9 @@ stop php-fpm: ${phpdir}sbin/php-fpm stop
 			<value name="environment">
 				<value name="HOSTNAME">\$HOSTNAME</value>
 				<value name="PATH">/usr/local/bin:/usr/bin:/bin</value>
-				<value name="TMP">${phpdir}tmp</value>
-				<value name="TMPDIR">${phpdir}tmp</value>
-				<value name="TEMP">${phpdir}tmp</value>
+				<value name="TMP">${phpdatadir}tmp</value>
+				<value name="TMPDIR">${phpdatadir}tmp</value>
+				<value name="TEMP">${phpdatadir}tmp</value>
 				<value name="OSTYPE">\$OSTYPE</value>
 				<value name="MACHTYPE">\$MACHTYPE</value>
 				<value name="MALLOC_CHECK_">2</value>
