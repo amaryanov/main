@@ -3,13 +3,18 @@
 #need: autoconf >= 2.13, g++, patch
 
 #####SCRIPT CONFIG#####
-#what to build
+#build
 nginxbuild=1
-mysqlbuild=1
-phpbuild=1
+mysqlbuild=0
+phpbuild=0
+
+#configure
+nginxconf=1
+mysqlconf=0
+phpconf=0
 
 #rebuild
-nginxreb=0
+nginxreb=1
 mysqlreb=0
 phpreb=0
 zlibreb=0
@@ -22,30 +27,15 @@ jpegreb=0
 pngreb=0
 ncursesreb=0
 
-#what to configure
-nginxconf=1
-phpconf=1
-mysqlconf=1
-#####END SCRIPT CONFIG#####
-
-scriptdir=`dirname $(readlink -f $0)`
-
-topdir=$PWD/
-srcdir=${topdir}src/
-builddir=${topdir}build/
-oldbuilddir=${builddir}old/
-archdir=${topdir}arch/
-datadir=${topdir}data/
-buildlog=${srcdir}log/
-
+#versions
 nginxver="0.7.67"
+mysqlver="5.1"
 phpver="5.2.13"
-eaccver="0.9.6.1"
 phpfpmver="0.5.14"
+eaccver="0.9.6.1"
 zlibver="1.2.5"
 opsslver="1.0.0a"
 pcrever="8.10"
-mysqlver="5.1"
 mysqlsubver="49"
 mysqlfullver=$mysqlver.$mysqlsubver
 curlver="7.21.0"
@@ -56,12 +46,28 @@ jpegver="8b"
 pngver="1.4.3"
 ncursesver="5.7"
 
+#nginx conf
+export defaultip="127.0.0.1"
+export defaultip="8000"
+#####END SCRIPT CONFIG#####
+
+scriptdir=`dirname $(readlink -f $0)`/
+
+topdir=$PWD/
+srcdir=${topdir}src/
+builddir=${topdir}build/
+oldbuilddir=${builddir}old/
+archdir=${topdir}arch/
+export datadir=${topdir}data/
+buildlog=${srcdir}log/
+
 mkdir -p $srcdir
 mkdir -p $builddir
 mkdir -p $oldbuilddir
 mkdir -p $archdir
 mkdir -p $datadir
 mkdir -p $buildlog
+mkdir -p ${datadir}run
 
 cd $srcdir
 
@@ -202,7 +208,7 @@ then
 			--without-mail_smtp_module \
 			--conf-path=${datadir}nginx/conf/nginx.conf \
 			--error-log-path=${datadir}nginx/log/error.log \
-			--pid-path=${datadir}nginx/log/nginx.pid \
+			--pid-path=${datadir}run/nginx.pid \
 			--lock-path=${datadir}nginx/log/nginx.lock \
 			--http-log-path=${datadir}nginx/log/access.log \
 			--http-client-body-temp-path=${datadir}nginx/client_body_temp \
@@ -215,10 +221,20 @@ then
 		make install >> ${buildlog}nginx-${nginxver}.log 2>&1 || exit 1
 		if [ $nginxconf = "1" ]
 		then
-			echo "NGINX CONFIGURATION DOES NOT IMPLEMENTED" | tee -a ${buildlog}nginx-${nginxver}.log
-			#configure main and add configs for magento
+			cd ${scriptdir}conf/nginx
+				export nginxdatadir=${datadir}nginx/
+				find . -type d \! -wholename '*.svn*' \! -name '\.' -exec mkdir -p ${datadir}nginx/conf/{} \;
+				for file in `find . -type f -executable \! -wholename '*.svn*' \! -name '\.'`
+				do
+					$file > ${nginxdatadir}conf/$file
+				done
+				for file in `find . -type f \! -executable \! -wholename '*.svn*' \! -name '\.'`
+				do
+					cp $file ${nginxdatadir}conf/$file
+				done
+			cd $OLDPWD
 		fi
-	cd $OLDPWD
+	cd $srcdir
 	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
 	echo "DONE BUILD nginx-${nginxver}" | tee -a ${buildlog}nginx-${nginxver}.log
 fi
@@ -328,7 +344,16 @@ then
 		echo "Need autoconf version >= 2.13"
 		exit 1
 	fi
-
+	if [ "`which g++`" = "" ]
+	then
+		echo "Need g++"
+		exit 1
+	fi
+	if [ "`which patch`" = "" ]
+	then
+		echo "Need patch"
+		exit 1
+	fi
 	if [ ! -e ${builddir}other/libpng-${pngver} -o $pngreb = "1" ]
 	then
 		echo "START BUILD libpng-${pngver}" | tee -a ${buildlog}libpng-${pngver}.log
@@ -599,11 +624,11 @@ then
 	echo -n "Make php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 	cd php-${phpver}
 		./configure --prefix=${builddir}php-${phpver} \
+			--with-fpm-conf=${datadir}php/conf/php-fpm.conf \
 			--with-fpm-log=${datadir}php/log/php-fpm.log \
-			--with-fpm-pid=${datadir}php/log/php-fpm.pid \
+			--with-fpm-pid=${datadir}run/php-fpm.pid \
 			--with-config-file-path=${datadir}php/conf \
 			--sysconfdir=${datadir}php/conf \
-			--with-fpm-conf=${datadir}php/conf/php-fpm.conf \
 			--disable-all \
 			--enable-fastcgi \
 			--enable-fpm \
@@ -638,6 +663,9 @@ then
 		if [ $phpconf = "1" ]
 		then
 			export phpdir=${builddir}php-${phpver}/
+			export phpdatadir=${datadir}php/
+			mkdir -p ${datadir}php/tmp
+			mkdir -p ${datadir}php/var
 			${scriptdir}/conf/php-fpm.conf.sh > ${datadir}php/conf/php-fpm.conf
 			#also add configs to php.ini
 		fi
