@@ -1,0 +1,5 @@
+server {
+	inclide listen/default;
+	inclide listen/default.ssl;
+	include /etc/nginx/sites-available/magazin/servers/default;
+}

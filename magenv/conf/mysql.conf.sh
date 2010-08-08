@@ -16,7 +16,7 @@ datadir	= ${mysqldatadir}var/data/
 port		= 3306
 socket		= ${mysqldatadir}var/mysql.sock
 
-pid-file	= ${mysqldatadir}var/mysql.pid
+pid-file	= ${datadir}run/mysql.pid
 general_log
 general_log_file = ${mysqldatadir}var/log/general.log
 log-error = ${mysqldatadir}var/log/error.log

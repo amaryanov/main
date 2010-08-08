@@ -13,10 +13,10 @@ stop php-fpm: ${phpdir}sbin/php-fpm stop
 	<section name="global_options">
 
 		Pid file
-		<value name="pid_file">${phpdatadir}logs/php-fpm.pid</value>
+		<value name="pid_file">${datadir}run/php-fpm.pid</value>
 
 		Error log file
-		<value name="error_log">${phpdatadir}logs/php-fpm.log</value>
+		<value name="error_log">${phpdatadir}log/php-fpm.log</value>
 
 		Log level
 		<value name="log_level">notice</value>
@@ -84,7 +84,7 @@ stop php-fpm: ${phpdir}sbin/php-fpm stop
 			<value name="request_slowlog_timeout">3s</value>
 
 			The log file for slow requests
-			<value name="slowlog">logs/slow.log</value>
+			<value name="slowlog">${phpdatadir}log/slow.log</value>
 
 			Set open file desc rlimit
 			<value name="rlimit_files">1024</value>
