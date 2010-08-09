@@ -1,9 +1,0 @@
-server {
-	listen 127.0.0.4:80 default;
-	include /etc/nginx/sites-available/magazin/servers/default;
-}
-server {
-	listen 127.0.0.4:443 default;
-	include /etc/nginx/sites-available/magazin/servers/default;
-	include /etc/nginx/sites-available/magazin/magazin.https.general.conf;
-}

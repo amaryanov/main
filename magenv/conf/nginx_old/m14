@@ -1,8 +1,0 @@
-server {
-	include /etc/nginx/sites-available/magazin2/servers/m14;
-	include /etc/nginx/sites-available/magazin2/magazin.http.conf;
-}
-server {
-	include /etc/nginx/sites-available/magazin2/servers/m14;
-	include /etc/nginx/sites-available/magazin2/magazin.https.disable_admin.conf;
-}

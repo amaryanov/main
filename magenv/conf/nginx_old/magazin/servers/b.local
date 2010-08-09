@@ -1,3 +1,0 @@
-	server_name b.local www.b.local;
-	access_log /home/okshop/data/logs/b.local.access.log mine;
-	error_log /home/okshop/data/logs/b.local.error.log;
