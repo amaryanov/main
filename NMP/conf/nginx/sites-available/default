@@ -1,0 +1,11 @@
+#!/bin/sh
+
+cat <<EOF
+server {
+	include listen/default;
+	server_name default;
+	access_log ${nginxdatadir}log/default.access.log main;
+	error_log ${nginxdatadir}log/default.error.log;
+	return 404;
+}
+EOF

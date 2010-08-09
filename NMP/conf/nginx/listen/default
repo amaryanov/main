@@ -1,0 +1,4 @@
+#!/bin/sh
+cat <<EOF
+listen ${defaultip}:${defaultport} default;
+EOF
