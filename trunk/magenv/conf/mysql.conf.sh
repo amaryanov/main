@@ -1,12 +1,12 @@
 #!/bin/sh
 
 cat <<EOF
-#start server: ${mysqlinstalldir}bin/mysqld_safe --defaults-file=${mysqldatadir}etc/my.cnf &
-#stop server: sudo ${mysqlinstalldir}bin/mysqladmin --defaults-file=${mysqldatadir}etc/my.cnf -v shutdown
+#start server: ${mysqlinstalldir}bin/mysqld_safe --defaults-file=${mysqldatadir}conf/my.cnf &
+#stop server: sudo ${mysqlinstalldir}bin/mysqladmin --defaults-file=${mysqldatadir}conf/my.cnf -v shutdown
 # The following options will be passed to all MySQL clients
 [client]
 port		= 3306
-socket		= ${mysqldatadir}var/mysql.sock
+socket		= ${datadir}run/mysql.sock
 
 # Here follows entries for some specific programs
 
@@ -14,7 +14,7 @@ socket		= ${mysqldatadir}var/mysql.sock
 [mysqld]
 datadir	= ${mysqldatadir}var/data/
 port		= 3306
-socket		= ${mysqldatadir}var/mysql.sock
+socket		= ${datadir}run/mysql.sock
 
 pid-file	= ${datadir}run/mysql.pid
 general_log
