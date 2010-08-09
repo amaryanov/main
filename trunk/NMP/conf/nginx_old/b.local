@@ -1,0 +1,8 @@
+server {
+	include /etc/nginx/sites-available/magazin/servers/b.local;
+	include /etc/nginx/sites-available/magazin/magazin.http.conf;
+}
+server {
+	include /etc/nginx/sites-available/magazin/servers/b.local;
+	include /etc/nginx/sites-available/magazin/magazin.https.disable_admin.conf;
+}
