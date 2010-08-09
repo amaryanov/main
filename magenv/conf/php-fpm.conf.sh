@@ -45,7 +45,7 @@ stop php-fpm: ${phpdir}sbin/php-fpm stop
 
 			Address to accept fastcgi requests on.
 			Valid syntax is 'ip.ad.re.ss:port' or just 'port' or '/path/to/unix/socket'
-			<value name="listen_address">${phpdatadir}var/php.sock</value>
+			<value name="listen_address">${datadir}run/php.sock</value>
 
 			<value name="listen_options">
 

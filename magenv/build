@@ -4,17 +4,17 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=1
+nginxbuild=0
 mysqlbuild=0
 phpbuild=0
 
 #configure
-nginxconf=1
+nginxconf=0
 mysqlconf=0
 phpconf=0
 
 #rebuild
-nginxreb=1
+nginxreb=0
 mysqlreb=0
 phpreb=0
 zlibreb=0
@@ -30,14 +30,14 @@ ncursesreb=0
 #versions
 nginxver="0.7.67"
 mysqlver="5.1"
-phpver="5.2.13"
+mysqlsubver="49"
+phpver="5.2.14"
+mysqlfullver=$mysqlver.$mysqlsubver
 phpfpmver="0.5.14"
 eaccver="0.9.6.1"
 zlibver="1.2.5"
-opsslver="1.0.0a"
+opsslver="0.9.8o"
 pcrever="8.10"
-mysqlsubver="49"
-mysqlfullver=$mysqlver.$mysqlsubver
 curlver="7.21.0"
 mcryptver="2.5.8"
 mhashver="0.9.9.9"
@@ -48,7 +48,7 @@ ncursesver="5.7"
 
 #nginx conf
 export defaultip="127.0.0.1"
-export defaultip="8000"
+export defaultport="8000"
 #####END SCRIPT CONFIG#####
 
 scriptdir=`dirname $(readlink -f $0)`/
@@ -72,7 +72,7 @@ mkdir -p ${datadir}run
 cd $srcdir
 
 #zlib
-if [ $nginxbuild = "1" -o $nginxreb = "1" ] || [ $phpbuild = "1" -o $mysqlbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" ] && [ ! -e ${builddir}other/zlib-${zlibver} -o $zlibreb = "1" ]
+if [ $phpbuild = "1" -o $mysqlbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" ] && [ ! -e ${builddir}other/zlib-${zlibver} -o $zlibreb = "1" ] || [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
 	echo "START BUILD zlib-"${zlibver} | tee -a ${buildlog}zlib-${zlibver}.log
 	if [ -e zlib-${zlibver} ]
@@ -91,7 +91,7 @@ then
 		echo "DONE" | tee -a ${buildlog}zlib-${zlibver}.log
 	fi
 
-	if [ $phpbuild = "1" -o $mysqlbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" ]
+	if [ $phpbuild = "1" -o $mysqlbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" ] && [ ! -e ${builddir}other/zlib-${zlibver} -o $zlibreb = "1" ]
 	then
 		echo -n "Make zlib-${zlibver}..." | tee -a ${buildlog}zlib-${zlibver}.log
 		if [ -e ${builddir}other/zlib-${zlibver} ]
@@ -108,17 +108,15 @@ then
 	fi
 	echo "DONE BUILD zlib-"${zlibver} | tee -a ${buildlog}zlib-${zlibver}.log
 fi
-
 #openssl
-#if [ $nginxbuild = "1" -o $phpbuild = "1" -o $nginxreb = "1" -o $phpreb = "1" ]
-if [ $nginxbuild = "1" -o $nginxreb = "1" ] || [ $phpbuild = "1" -o $phpreb = "1" ] && [ ! -e ${builddir}other/openssl-${opsslver} -o $opsslreb = "1" ]
+if [ $phpbuild = "1" -o $phpreb = "1" ] && [ ! -e ${builddir}other/openssl-${opsslver} -o $opsslreb = "1" ] || [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
 	echo "START BUILD openssl-${opsslver}" | tee -a ${buildlog}openssl-${opsslver}.log
 	if [ -e openssl-${opsslver} ]
 	then
 		echo -n "Clean openssl-${opsslver}..." | tee -a ${buildlog}openssl-${opsslver}.log
 		cd openssl-${opsslver}
-			make dclean >> ${buildlog}openssl-${opsslver}.log 2>&1
+			make clean dclean >> ${buildlog}openssl-${opsslver}.log 2>&1
 		cd $OLDPWD
 		echo "DONE" | tee -a ${buildlog}openssl-${opsslver}.log
 	else
@@ -130,7 +128,7 @@ then
 		echo "DONE" | tee -a ${buildlog}openssl-${opsslver}.log
 	fi
 
-	if [ $phpbuild = "1" -o $phpreb = "1" ]
+	if [ $phpbuild = "1" -o $phpreb = "1" ] && [ ! -e ${builddir}other/openssl-${opsslver} -o $opsslreb = "1" ]
 	then
 		echo -n "Make openssl-${opsslver}..." | tee -a ${buildlog}openssl-${opsslver}.log
 		if [ -e ${builddir}other/openssl-${opsslver} ]
@@ -197,7 +195,6 @@ then
 		./configure --prefix=${builddir}nginx-${nginxver} \
 			--without-poll_module \
 			--without-select_module \
-			--with-http_ssl_module \
 			--without-http_ssi_module \
 			--without-http_userid_module \
 			--without-http_autoindex_module \
@@ -214,29 +211,33 @@ then
 			--http-client-body-temp-path=${datadir}nginx/client_body_temp \
 			--http-proxy-temp-path=${datadir}nginx/proxy_temp \
 			--http-fastcgi-temp-path=${datadir}nginx/fastcgi_temp \
-			--with-pcre=${srcdir}/pcre-${pcrever} \
 			--with-zlib=${srcdir}/zlib-${zlibver} \
-			--with-openssl=${srcdir}/openssl-${opsslver} >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
+			--with-http_ssl_module \
+			--with-openssl=${srcdir}/openssl-${opsslver}\
+			--with-pcre=${srcdir}/pcre-${pcrever}  >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
 		make >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
 		make install >> ${buildlog}nginx-${nginxver}.log 2>&1 || exit 1
-		if [ $nginxconf = "1" ]
-		then
-			cd ${scriptdir}conf/nginx
-				export nginxdatadir=${datadir}nginx/
-				find . -type d \! -wholename '*.svn*' \! -name '\.' -exec mkdir -p ${datadir}nginx/conf/{} \;
-				for file in `find . -type f -executable \! -wholename '*.svn*' \! -name '\.'`
-				do
-					$file > ${nginxdatadir}conf/$file
-				done
-				for file in `find . -type f \! -executable \! -wholename '*.svn*' \! -name '\.'`
-				do
-					cp $file ${nginxdatadir}conf/$file
-				done
-			cd $OLDPWD
-		fi
 	cd $srcdir
 	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
 	echo "DONE BUILD nginx-${nginxver}" | tee -a ${buildlog}nginx-${nginxver}.log
+fi
+if [ $nginxconf = "1" ]
+then
+	echo -n "Configure nginx-${nginxver}..." | tee -a ${buildlog}nginx-${nginxver}.log
+	cd ${scriptdir}conf/nginx
+		export nginxdatadir=${datadir}nginx/
+		mkdir -p ${nginxdatadir}cert
+		find . -type d \! -wholename '*.svn*' \! -name '\.' -exec mkdir -p ${nginxdatadir}conf/{} \;
+		for file in `find . -type f -executable \! -wholename '*.svn*' \! -name '\.'`
+		do
+			$file > ${nginxdatadir}conf/$file
+		done
+		for file in `find . -type f \! -executable \! -wholename '*.svn*' \! -name '\.'`
+		do
+			cp $file ${nginxdatadir}conf/$file
+		done
+	cd $OLDPWD
+	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
 fi
 
 #mysql
@@ -308,6 +309,7 @@ then
 			./configure --prefix=${mysqlinstalldir} \
 				--with-mysqld-ldflags=-all-static \
 				--with-client-ldflags=-all-static \
+				--sysconfdir=${mysqldatadir}conf \
 				--enable-assembler \
 				--enable-thread-safe-client \
 				--with-named-curses-libs=${builddir}other/ncurses-${ncursesver}/lib/libncurses.a \
@@ -316,24 +318,27 @@ then
 				--with-extra-charsets=ascii,cp1251,koi8r,latin1,latin2 \
 				--with-plugins=innobase,myisam,partition,myisammrg \
 				--with-mysqld-user=mysql \
-				--with-unix-socket-path=${mysqldatadir}/var/mysql.sock >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 && \
+				--with-unix-socket-path=${datadir}run/mysql.sock >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 && \
 		make >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 && \
 		make install >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
-		if [ $mysqlconf = "1" ]
-		then
-			mkdir -p ${mysqldatadir}/etc/
-			mkdir -p ${mysqldatadir}/tmp/
-			mkdir -p ${mysqldatadir}/var/data/
-			mkdir -p ${mysqldatadir}/var/log/
-			mkdir -p ${mysqldatadir}/var/log/innodb
-			mkdir -p ${mysqldatadir}/var/innodb/
-			${scriptdir}/conf/mysql.conf.sh > ${mysqldatadir}/etc/my.cnf
-			${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/etc/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
-			#also create db and user for magento
-		fi
 	cd $OLDPWD
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 	echo "DONE BUILD mysql-${mysqlfullver}" | tee -a ${buildlog}mysql-${mysqlfullver}.log
+fi
+if [ $mysqlconf = "1" ]
+then
+	echo -n "Configure mysql-${mysqlfullver}..." | tee -a ${buildlog}mysql-${mysqlfullver}.log
+	export mysqldatadir=${datadir}mysql/ #export for mysql.conf.sh
+	export mysqlinstalldir=${builddir}mysql-${mysqlfullver}/ #export for mysql.conf.sh
+	mkdir -p ${mysqldatadir}/conf/
+	mkdir -p ${mysqldatadir}/tmp/
+	mkdir -p ${mysqldatadir}/var/data/
+	mkdir -p ${mysqldatadir}/var/log/
+	mkdir -p ${mysqldatadir}/var/log/innodb
+	mkdir -p ${mysqldatadir}/var/innodb/
+	${scriptdir}/conf/mysql.conf.sh > ${mysqldatadir}/conf/my.cnf
+	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
+	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
 
 #php
@@ -660,18 +665,19 @@ then
 		make >> ${buildlog}php-${phpver}.log 2>&1 &&	\
 #		make test >> ${buildlog}php-${phpver}.log 2>&1 && \
 		make install >> ${buildlog}php-${phpver}.log 2>&1 || exit 1
-		if [ $phpconf = "1" ]
-		then
-			export phpdir=${builddir}php-${phpver}/
-			export phpdatadir=${datadir}php/
-			mkdir -p ${datadir}php/tmp
-			mkdir -p ${datadir}php/var
-			${scriptdir}/conf/php-fpm.conf.sh > ${datadir}php/conf/php-fpm.conf
-			#also add configs to php.ini
-		fi
 	cd $OLDPWD
 	echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 	echo "DONE BUILD php-${phpver}" | tee -a ${buildlog}php-${phpver}.log
+fi
+if [ $phpconf = "1" ]
+then
+	echo -n "Configure php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
+	export phpdir=${builddir}php-${phpver}/
+	export phpdatadir=${datadir}php/
+	mkdir -p ${phpdatadir}tmp
+	mkdir -p ${phpdatadir}var
+	${scriptdir}/conf/php-fpm.conf.sh > ${phpdatadir}conf/php-fpm.conf
+	echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 fi
 
 exit 0
