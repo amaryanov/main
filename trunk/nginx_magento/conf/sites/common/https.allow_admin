@@ -1,0 +1,20 @@
+	include /etc/nginx/sites-available/magazin2/magazin.https.common.conf;
+	if ( $request_uri !~* ^/((index.php/)?0f1b9bd4d4134381b9f30c1cb5d25335ed3bc2ac612a3187fa15296aba14b568)|skin|js|minify ) {
+	#http://$host permanent;
+		return 404;
+	}
+	location ~ ^/(index.php/)?0f1b9bd4d4134381b9f30c1cb5d25335ed3bc2ac612a3187fa15296aba14b568 { #CONTROL
+		allow 127.0.0.4;
+		allow 193.46.86.225;
+		allow 91.210.189.17;
+		allow 91.210.189.50;
+		allow 95.111.128.0/17;
+		allow 93.180.192.0/18;
+		deny all;
+		#error_page 404 = @allow_control;
+		fastcgi_param HTTPS on;
+		include /etc/nginx/sites-available/magazin2/magazin.php.conf;
+	}
+	location @allow_control {
+		rewrite .* /index.php last;
+	}
