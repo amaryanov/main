@@ -4,19 +4,19 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=0
-mysqlbuild=0
+nginxbuild=1
+mysqlbuild=1
 phpbuild=1
 
 #configure
-nginxconf=0
-mysqlconf=0
+nginxconf=1
+mysqlconf=1
 phpconf=0
 
 #rebuild
 nginxreb=0
 mysqlreb=0
-phpreb=1
+phpreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -141,8 +141,8 @@ then
 		fi
 		cd openssl-${opsslver}
 			./config --prefix=${builddir}other/openssl-${opsslver} \
-				--with-zlib-lib=${builddir}other/zlib-${zlibver}/lib \
-				--with-zlib-include=${builddir}other/zlib-${zlibver}/include \
+				-L${builddir}other/zlib-${zlibver}/lib \
+				-I${builddir}other/zlib-${zlibver}/include \
 				-Wl,-rpath \
 				-Wl,${builddir}other/zlib-${zlibver}/lib \
 				threads zlib shared >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
@@ -682,12 +682,12 @@ then
 		echo -n "Wget and untar php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 		cd ${archdir}
 			wget -c http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror >> ${buildlog}php-${phpver}.log 2>&1
-			wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz >> ${buildlog}php-${phpver}.log 2>&1
+#			wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz >> ${buildlog}php-${phpver}.log 2>&1
 		cd $OLDPWD
 		tar -xzf ${archdir}php-${phpver}.tar.gz >> ${buildlog}php-${phpver}.log 2>&1
-		gzip -fdc ${archdir}php-${phpver}-fpm-${phpfpmver}.diff.gz > php-${phpver}-fpm-${phpfpmver}.diff
+#		gzip -fdc ${archdir}php-${phpver}-fpm-${phpfpmver}.diff.gz > php-${phpver}-fpm-${phpfpmver}.diff
 		echo "DONE" | tee -a ${buildlog}php-${phpver}.log
-		echo -n "Patch and buildconf php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
+		echo -n "Buildconf php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 		cd php-${phpver}
 #			patch -p1 < ${srcdir}/php-${phpver}-fpm-${phpfpmver}.diff >> ${buildlog}php-${phpver}.log 2>&1
 			cp -r ../eaccelerator-${eaccver} ext/eaccelerator
@@ -699,41 +699,38 @@ then
 	echo -n "Make php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 	cd php-${phpver}
 		./configure --prefix=${builddir}php-${phpver} \
-			--with-config-file-path=${datadir}php/conf \
-			--sysconfdir=${datadir}php/conf \
-			--with-libevent-dir=${builddir}other/libevent-${eventver} \
-			--with-iconv-dir=${builddir}other/libiconv-${iconvver} \
-			--enable-shared=no \
-			--without-pear \
 			--disable-all \
-			--enable-simplexml \
-			--enable-fpm \
-			--with-iconv \
-			--enable-session \
+			--enable-dom \
 			--enable-eaccelerator \
-			--with-mysql=${builddir}mysql-${mysqlfullver}/ \
-			--with-mysqli=${builddir}mysql-${mysqlfullver}/bin/mysql_config \
-			--with-pcre-regex \
+			--enable-fpm \
+			--enable-ftp \
+			--enable-libxml \
+			--enable-mbstring \
+			--enable-pdo \
+			--enable-session \
+			--enable-simplexml \
+			--enable-soap \
+			--enable-sockets \
+			--enable-xml \
+			--sysconfdir=${datadir}php/conf \
+			--with-config-file-path=${datadir}php/conf \
+			--with-curl=${builddir}other/curl-${curlver} \
 			--with-gd \
+			--with-iconv \
+			--with-iconv-dir=${builddir}other/libiconv-${iconvver} \
+			--with-jpeg-dir=${builddir}other/libjpeg-${jpegver} \
+			--with-libevent-dir=${builddir}other/libevent-${eventver} \
+			--with-libxml-dir=${builddir}other/libxml2-${libxmlver} \
 			--with-mcrypt=${builddir}other/libmcrypt-${mcryptver} \
 			--with-mhash=${builddir}other/mhash-${mhashver} \
-			--with-curl=${builddir}other/curl-${curlver} \
-			--enable-ftp \
+			--with-mysql=${builddir}mysql-${mysqlfullver}/ \
+			--with-mysqli=${builddir}mysql-${mysqlfullver}/bin/mysql_config \
 			--with-openssl=${builddir}other/openssl-${opsslver} \
-			--enable-dom \
-			--enable-sockets \
-			--with-zlib=${builddir}other/zlib-${zlibver} \
-			--with-pear \
+			--with-pcre-regex \
 			--with-pdo-mysql=${builddir}mysql-${mysqlfullver}/ \
-			--enable-soap \
-			--enable-pdo \
-			--with-jpeg-dir=${builddir}other/libjpeg-${jpegver} \
 			--with-png-dir=${builddir}other/libpng-${pngver} \
-			--enable-mbstring \
-			--without-pear \
-			--enable-xml \
-			--enable-libxml \
-			--with-libxml-dir=${builddir}other/libxml2-${libxmlver} >> ${buildlog}php-${phpver}.log 2>&1 && \
+			--with-zlib=${builddir}other/zlib-${zlibver} \
+			--without-pear >> ${buildlog}php-${phpver}.log 2>&1 && \
 		make >> ${buildlog}php-${phpver}.log 2>&1 &&	\
 #		make test >> ${buildlog}php-${phpver}.log 2>&1 && \
 		make install >> ${buildlog}php-${phpver}.log 2>&1 || exit 1
