@@ -1,3 +1,0 @@
-	server_name nginx4.dev www.nginx4.dev;
-	access_log /home/okshop/data/logs/nginx4.dev.access.log mine;
-	error_log /home/okshop/data/logs/nginx4.dev.error.log;
