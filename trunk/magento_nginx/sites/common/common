@@ -1,0 +1,39 @@
+root sites/$server_name/public/;
+access_log log/$server_name/access.log main;
+gzip  on;
+gzip_comp_level 1;
+gzip_proxied any;
+gzip_types text/plain text/css application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+index index.php;
+
+location ~* "^.+\.(jpe?g|gif|css|png|js|ico|pdf|zip|tar|t?gz|mp3|wav|swf)$"
+{
+	expires    max;
+	add_header Cache-Control public;
+}
+location ~ (^/(app|includes|lib|pkginfo|var|report/config\.xml))|/\.svn|/\.hta.+
+{
+	return 404;
+}
+location ~ ^/js/index.php.+
+{
+	rewrite .* /js/index.php last;
+}
+location ~ ^/minify/
+{
+	rewrite ^/minify/([^/]+)(/.*.(js|css))$ /minify.php?f=$2&d=$1 last;
+}
+location /
+{
+	if ( !-e $request_filename )
+	{
+		rewrite .* /index.php last;
+	}
+}
+location ~ \.php$
+{
+	fastcgi_index index.php;
+	fastcgi_pass phpbackend;
+	fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+	include fastcgi_params;
+}

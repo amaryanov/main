@@ -1,0 +1,13 @@
+server {
+	include sites/listen/default;
+	server_name default;
+	error_log log/default/error.log;
+	access_log log/$server_name/access.log main;
+	ssl_certificate		cert/ssl.crt;
+	ssl_certificate_key	cert/ssl.key;
+	ssl_protocols		SSLv3 TLSv1;
+	ssl_ciphers			AES128-SHA:AES256-SHA:RC4-SHA:DES-CBC3-SHA:RC4-MD5;
+	ssl_session_cache	shared:SSL:10m;
+	ssl_session_timeout	10m;
+	return 404;
+}

@@ -1,0 +1,13 @@
+allow 127.0.0.1;
+deny all;
+error_page 403 = /404;
+location /404
+{
+	internal;
+	return 404;
+}
+if ( $request_uri !~* ^/(((index.php/)?admin)|skin|js|minify)(/|$) ) {
+	return 404;
+}
+
+include sites/common/common;

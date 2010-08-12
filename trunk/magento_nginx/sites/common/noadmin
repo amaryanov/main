@@ -1,0 +1,4 @@
+location ~ ^/(index.php/)?admin { #admin
+	return 404;
+}
+include sites/common/common;
