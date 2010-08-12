@@ -1,7 +1,0 @@
-server {
-	include sites/listen/default;
-	server_name default;
-	access_log /home/amaryanov/build/data/nginx/log/default/access.log main;
-	error_log /home/amaryanov/build/data/nginx/log/default/error.log;
-	return 404;
-}

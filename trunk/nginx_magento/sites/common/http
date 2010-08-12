@@ -1,7 +1,0 @@
-	include sites/common/common;
-	location ~ ^/(index.php/)?admin { #admin
-		deny all;
-	}
-	location ~ \.php$ {
-		include sites/common/php;
-	}

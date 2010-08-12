@@ -4,14 +4,14 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=1
-mysqlbuild=1
-phpbuild=1
+nginxbuild=0
+mysqlbuild=0
+phpbuild=0
 
 #configure
-nginxconf=1
-mysqlconf=1
-phpconf=0
+nginxconf=0
+mysqlconf=0
+phpconf=1
 
 #rebuild
 nginxreb=0
@@ -682,14 +682,11 @@ then
 		echo -n "Wget and untar php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 		cd ${archdir}
 			wget -c http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror >> ${buildlog}php-${phpver}.log 2>&1
-#			wget -c http://php-fpm.org/downloads/php-${phpver}-fpm-${phpfpmver}.diff.gz >> ${buildlog}php-${phpver}.log 2>&1
 		cd $OLDPWD
 		tar -xzf ${archdir}php-${phpver}.tar.gz >> ${buildlog}php-${phpver}.log 2>&1
-#		gzip -fdc ${archdir}php-${phpver}-fpm-${phpfpmver}.diff.gz > php-${phpver}-fpm-${phpfpmver}.diff
 		echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 		echo -n "Buildconf php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
 		cd php-${phpver}
-#			patch -p1 < ${srcdir}/php-${phpver}-fpm-${phpfpmver}.diff >> ${buildlog}php-${phpver}.log 2>&1
 			cp -r ../eaccelerator-${eaccver} ext/eaccelerator
 			./buildconf --force >> ${buildlog}php-${phpver}.log 2>&1
 		cd $OLDPWD
@@ -744,7 +741,6 @@ then
 	export phpdir=${builddir}php-${phpver}/
 	export phpdatadir=${datadir}php/
 	mkdir -p ${phpdatadir}tmp
-	mkdir -p ${phpdatadir}var
 	${scriptdir}/conf/php-fpm.conf.sh > ${phpdatadir}conf/php-fpm.conf
 	echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 fi

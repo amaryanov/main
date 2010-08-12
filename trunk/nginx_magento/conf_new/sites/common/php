@@ -1,9 +1,0 @@
-if (!-e /home/anton/sites/m14/public/$fastcgi_script_name) {
-	rewrite .* /index.php break;
-}
-fastcgi_index index.php;
-fastcgi_pass 127.0.0.1:9000;
-fastcgi_param SCRIPT_FILENAME /home/anton/sites/m14/public/$fastcgi_script_name;
-fastcgi_param PATH_INFO $fastcgi_script_name;
-fastcgi_param  SERVER_SOFTWARE    nginx;
-include /usr/local/etc/nginx/fastcgi_params;
