@@ -215,10 +215,10 @@ then
 			--http-client-body-temp-path=${datadir}nginx/client_body_temp \
 			--http-proxy-temp-path=${datadir}nginx/proxy_temp \
 			--http-fastcgi-temp-path=${datadir}nginx/fastcgi_temp \
-			--with-zlib=${srcdir}/zlib-${zlibver} \
+			--with-zlib=${srcdir}zlib-${zlibver} \
 			--with-http_ssl_module \
-			--with-openssl=${srcdir}/openssl-${opsslver}\
-			--with-pcre=${srcdir}/pcre-${pcrever}  >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
+			--with-openssl=${srcdir}openssl-${opsslver}\
+			--with-pcre=${srcdir}pcre-${pcrever}  >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
 		make >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
 		make install >> ${buildlog}nginx-${nginxver}.log 2>&1 || exit 1
 	cd $srcdir
