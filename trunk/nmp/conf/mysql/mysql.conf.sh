@@ -12,34 +12,34 @@ socket		= ${datadir}run/mysql.sock
 
 # The MySQL server
 [mysqld]
-datadir	= ${mysqldatadir}var/data/
+datadir	= ${mysqldatadir}data/db
 port		= 3306
 socket		= ${datadir}run/mysql.sock
 
 pid-file	= ${datadir}run/mysql.pid
 general_log
-general_log_file = ${mysqldatadir}var/log/general.log
-log-error = ${mysqldatadir}var/log/error.log
-log-isam = ${mysqldatadir}var/log/myisam.log
-log-bin=${mysqldatadir}var/log/log-bin.log
-log-bin-index = ${mysqldatadir}var/log/bin-index.log
+general_log_file = ${mysqldatadir}log/general.log
+log-error = ${mysqldatadir}log/error.log
+log-isam = ${mysqldatadir}log/myisam.log
+log-bin=${mysqldatadir}log/log-bin.log
+log-bin-index = ${mysqldatadir}log/bin-index.log
 log-slow-admin-statements
 log-slow-slave-statements
-log-tc=${mysqldatadir}var/log/log-tc.log
+log-tc=${mysqldatadir}log/log-tc.log
 log-warnings
 log-output=FILE
 long_query_time = 1
-relay-log = ${mysqldatadir}var/log/relay.log
-relay-log-index = ${mysqldatadir}var/log/relay-index.log
-relay-log-info-file = ${mysqldatadir}var/log/relay-log-info.log
+relay-log = ${mysqldatadir}log/relay.log
+relay-log-index = ${mysqldatadir}log/relay-index.log
+relay-log-info-file = ${mysqldatadir}log/relay-log-info.log
 slow-query-log
-slow_query_log_file = ${mysqldatadir}var/log/slow.log
+slow_query_log_file = ${mysqldatadir}log/slow.log
 log-queries-not-using-indexes
 log-slave-updates
 innodb=ON
-innodb_data_home_dir = ${mysqldatadir}var/innodb/
+innodb_data_home_dir = ${mysqldatadir}innodb/
 innodb_data_file_path = ibdata1:10M:autoextend
-innodb_log_group_home_dir = ${mysqldatadir}var/log/innodb/
+innodb_log_group_home_dir = ${mysqldatadir}log/innodb/
 innodb_buffer_pool_size = 16M
 innodb_additional_mem_pool_size = 2M
 innodb_log_file_size = 5M
@@ -69,7 +69,7 @@ skip-networking
 
 # Replication Master Server (default)
 # binary logging is required for replication
-log-bin=${mysqldatadir}var/log/mysql-bin
+log-bin=${mysqldatadir}log/mysql-bin
 
 # binary logging format - mixed recommended
 binlog_format=mixed
