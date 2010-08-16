@@ -1,8 +1,6 @@
 #!/bin/sh
 
 cat <<EOF
-#start server: ${mysqlinstalldir}bin/mysqld_safe --defaults-file=${mysqldatadir}conf/my.cnf &
-#stop server: sudo ${mysqlinstalldir}bin/mysqladmin --defaults-file=${mysqldatadir}conf/my.cnf -v shutdown
 # The following options will be passed to all MySQL clients
 [client]
 port		= 3306
@@ -12,6 +10,7 @@ socket		= ${datadir}run/mysql.sock
 
 # The MySQL server
 [mysqld]
+user=mysql
 datadir	= ${mysqldatadir}data/db
 port		= 3306
 socket		= ${datadir}run/mysql.sock
