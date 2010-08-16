@@ -2,21 +2,28 @@
 
 cat << EOF
 #! /bin/sh
-# nginx daemon start/stop script.
+# MySQL daemon start/stop script.
 
 # Usually this is put in /etc/init.d (at least on machines SYSV R4 based
-# systems) and linked to /etc/rc3.d/S99nginx and /etc/rc0.d/K01nginx.
+# systems) and linked to /etc/rc3.d/S99mysql and /etc/rc0.d/K01mysql.
 ### BEGIN INIT INFO
-# Provides: nginx
+# Provides: mysql
 # Required-Start: \$local_fs \$network \$remote_fs
+# Should-Start: ypbind nscd ldap ntpd xntpd
 # Required-Stop: \$local_fs \$network \$remote_fs
 # Default-Start:  2 3 4 5
 # Default-Stop: 0 1 6
-# Short-Description: start and stop nginx
-# Description: nginx.
+# Short-Description: start and stop MySQL
+# Description: MySQL is a very fast and reliable SQL database engine.
 ### END INIT INFO
-nginx=${nginxdir}sbin/nginx
-nginxpid=${datadir}run/nginx.pid
+mysqladmin=${mysqlinstalldir}bin/mysqladmin
+mysqld_safe=${mysqlinstalldir}bin/mysqld_safe
+mycnf=${datadir}mysql/conf/my.cnf
+mysqlpid=${datadir}run/mysql.pid
+
+
+opts="--defaults-file=\$mycnf"
+
 
 wait_for_pid () {
 	try=0
@@ -49,16 +56,16 @@ wait_for_pid () {
 
 case "\$1" in
 	start)
-		echo -n "Starting nginx "
+		echo -n "Starting mysql "
 
-		\$nginx
+		\$mysqld_safe \$opts &
 
 		if [ "\$?" != 0 ] ; then
 			echo " failed"
 			exit 1
 		fi
 
-		wait_for_pid created \$nginxpid
+		wait_for_pid created \$mysqlpid
 
 		if [ -n "\$try" ] ; then
 			echo " failed"
@@ -69,16 +76,16 @@ case "\$1" in
 	;;
 
 	stop)
-		echo -n "Gracefully shutting down nginx "
+		echo -n "Gracefully shutting down mysql "
 
-		if [ ! -r \$nginxpid ] ; then
-			echo "warning, no pid file found - nginx is not running ?"
+		if [ ! -r \$mysqlpid ] ; then
+			echo "warning, no pid file found - mysql is not running ?"
 			exit 1
 		fi
 
-		\$nginx -s quit
+		\$mysqladmin \$opts -v shutdown
 
-		wait_for_pid removed \$nginxpid
+		wait_for_pid removed \$mysqlpid
 
 		if [ -n "\$try" ] ; then
 			echo " failed. Use force-exit"

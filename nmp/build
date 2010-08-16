@@ -5,13 +5,13 @@
 #####SCRIPT CONFIG#####
 #build
 nginxbuild=0
-mysqlbuild=0
+mysqlbuild=1
 phpbuild=0
 
 #configure
 nginxconf=0
-mysqlconf=0
-phpconf=1
+mysqlconf=1
+phpconf=0
 
 #rebuild
 nginxreb=0
@@ -222,29 +222,26 @@ then
 		make >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
 		make install >> ${buildlog}nginx-${nginxver}.log 2>&1 || exit 1
 	cd $srcdir
+	cd ${builddir}
+		ln -sf nginx-${nginxver} nginx-current
+	cd $OLDPWD
 	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
 	echo "DONE BUILD nginx-${nginxver}" | tee -a ${buildlog}nginx-${nginxver}.log
 fi
 if [ $nginxconf = "1" ]
 then
 	echo -n "Configure nginx-${nginxver}..." | tee -a ${buildlog}nginx-${nginxver}.log
+	nginxdatadir=${datadir}nginx/
+	export nginxdir=${builddir}nginx-current/
+	mkdir -p ${nginxdatadir}
+	mv -f ${nginxdatadir}conf ${nginxdatadir}conf_back
 	cd ${builddir}nginx-${nginxver} #create symlinks for shorting pathes in config
 		ln -sf ../../data/nginx/log .
 		ln -sf ../../data/run .
 	cd $OLDPWD
-	cd ${scriptdir}conf/nginx
-		export nginxdatadir=${datadir}nginx/
-		mkdir -p ${nginxdatadir}cert
-		find . -type d \! -wholename '*.svn*' \! -name '\.' -exec mkdir -p ${nginxdatadir}conf/{} \;
-		for file in `find . -type f -executable \! -wholename '*.svn*' \! -name '\.'`
-		do
-			$file > ${nginxdatadir}conf/$file
-		done
-		for file in `find . -type f \! -executable \! -wholename '*.svn*' \! -name '\.'`
-		do
-			cp $file ${nginxdatadir}conf/$file
-		done
-	cd $OLDPWD
+	cp -r ${scriptdir}conf/nginx/conf ${nginxdatadir}
+	${scriptdir}conf/nginx/init.d.sh > ${nginxdatadir}conf/init.d
+	chmod 755 ${nginxdatadir}conf/init.d
 	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
 fi
 
@@ -330,6 +327,9 @@ then
 		make >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 && \
 		make install >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
 	cd $OLDPWD
+	cd ${builddir}
+		ln -sf mysql-${mysqlfullver} mysql-current
+	cd $OLDPWD
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 	echo "DONE BUILD mysql-${mysqlfullver}" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
@@ -337,15 +337,20 @@ if [ $mysqlconf = "1" ]
 then
 	echo -n "Configure mysql-${mysqlfullver}..." | tee -a ${buildlog}mysql-${mysqlfullver}.log
 	export mysqldatadir=${datadir}mysql/ #export for mysql.conf.sh
-	export mysqlinstalldir=${builddir}mysql-${mysqlfullver}/ #export for mysql.conf.sh
+	export mysqlinstalldir=${builddir}mysql-current/ #export for mysql.conf.sh
+	if [ -e ${mysqldatadir}/conf ]
+	then
+		mv ${mysqldatadir}/conf `mktemp -dp ${mysqldatadir} conf_back.XXX`
+	fi
 	mkdir -p ${mysqldatadir}/conf/
 	mkdir -p ${mysqldatadir}/tmp/
-	mkdir -p ${mysqldatadir}/var/data/
-	mkdir -p ${mysqldatadir}/var/log/
-	mkdir -p ${mysqldatadir}/var/log/innodb
-	mkdir -p ${mysqldatadir}/var/innodb/
-	${scriptdir}/conf/mysql.conf.sh > ${mysqldatadir}/conf/my.cnf
-	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
+	mkdir -p ${mysqldatadir}/log
+	mkdir -p ${mysqldatadir}/data/db
+	mkdir -p ${mysqldatadir}/data/innodb
+	${scriptdir}/conf/mysql/mysql.conf.sh > ${mysqldatadir}/conf/my.cnf
+	${scriptdir}/conf/mysql/init.d.sh > ${mysqldatadir}conf/init.d
+	chmod 755 ${mysqldatadir}conf/init.d
+	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
 
@@ -732,16 +737,21 @@ then
 #		make test >> ${buildlog}php-${phpver}.log 2>&1 && \
 		make install >> ${buildlog}php-${phpver}.log 2>&1 || exit 1
 	cd $OLDPWD
+	cd ${builddir}
+		ln -sf php-${phpver} php-current
+	cd $OLDPWD
 	echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 	echo "DONE BUILD php-${phpver}" | tee -a ${buildlog}php-${phpver}.log
 fi
 if [ $phpconf = "1" ]
 then
 	echo -n "Configure php-${phpver}..." | tee -a ${buildlog}php-${phpver}.log
-	export phpdir=${builddir}php-${phpver}/
+	export phpdir=${builddir}php-current/
 	export phpdatadir=${datadir}php/
 	mkdir -p ${phpdatadir}tmp
-	${scriptdir}/conf/php-fpm.conf.sh > ${phpdatadir}conf/php-fpm.conf
+	${scriptdir}/conf/php/php-fpm.conf.sh > ${phpdatadir}conf/php-fpm.conf
+	${scriptdir}/conf/php/init.d.sh > ${phpdatadir}conf/init.d
+	chmod 755 ${phpdatadir}conf/init.d
 	echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 fi
 
