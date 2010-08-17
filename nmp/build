@@ -353,6 +353,7 @@ then
 	chmod 755 ${mysqldatadir}init.d
 	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
 	sudo chown -R mysql:mysql ${mysqldatadir}
+	sudo chmod a+w ${datadir}run
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
 
