@@ -9,17 +9,17 @@
 #build
 nginxbuild=0
 mysqlbuild=0
-phpbuild=1
+phpbuild=0
 
 #configure
-nginxconf=0
+nginxconf=1
 mysqlconf=0
 phpconf=0
 
 #rebuild
 nginxreb=0
 mysqlreb=0
-phpreb=1
+phpreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -229,6 +229,8 @@ then
 			--with-pcre=${srcdir}pcre-${pcrever}  >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
 		make >> ${buildlog}nginx-${nginxver}.log 2>&1 && \
 		make install >> ${buildlog}nginx-${nginxver}.log 2>&1 || exit 1
+		ln -sf ../../data/nginx/log .
+		ln -sf ../../data/run .
 	cd $srcdir
 	cd ${builddir}
 		ln -sf nginx-${nginxver} nginx-current
@@ -242,14 +244,11 @@ then
 	nginxdatadir=${datadir}nginx/
 	export nginxdir=${builddir}nginx-current/
 	mkdir -p ${nginxdatadir}
+	mkdir -p ${nginxdatadir}log
 	if [ -e ${nginxdatadir}conf ]
 	then
 		mv -f ${nginxdatadir}conf `mktemp -dp ${nginxdatadir} conf_back.XXX`
 	fi
-	cd ${builddir}nginx-${nginxver} #create symlinks for shorting pathes in config
-		ln -sf ../../data/nginx/log .
-		ln -sf ../../data/run .
-	cd $OLDPWD
 	cp -r ${scriptdir}conf/nginx/conf ${nginxdatadir}
 	sed -i 's/user www/user '${wwwuser}'/' ${nginxdatadir}conf/nginx.conf
 	${scriptdir}conf/nginx/init.d.sh > ${nginxdatadir}init.d
