@@ -7,7 +7,7 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=1
+nginxbuild=0
 mysqlbuild=0
 phpbuild=1
 
@@ -17,7 +17,7 @@ mysqlconf=0
 phpconf=0
 
 #rebuild
-nginxreb=1
+nginxreb=0
 mysqlreb=0
 phpreb=1
 zlibreb=0
@@ -163,7 +163,7 @@ fi
 if [ $nginxbuild = "1" -a ! -e ${builddir}nginx-${nginxver} ] || [ $nginxreb = "1" -a -e ${builddir}nginx-${nginxver} ]
 then
 	echo "START BUILD nginx-${nginxver}" | tee -a ${buildlog}nginx-${nginxver}.log
-	if [ "`id -un ${wwwuser} 2>/dev/null`" = "" ]
+	if [ "`id -un ${wwwuser} 2>/dev/null`" != "${wwwuser}" ]
 	then
 		echo "Need ${wwwuser} user"
 		exit 1
@@ -260,7 +260,8 @@ fi
 #mysql
 if [ $mysqlbuild = "1" -a ! -e ${builddir}mysql-${mysqlfullver} ] || [ $mysqlreb = "1" -a -e ${builddir}mysql-${mysqlfullver} ]
 then
-	if [ "`id -un ${mysqluser} 2>/dev/null`" = "" -o "`id -ug ${mysqluser} 2>/dev/null`" = "" ]
+	echo "START BUILD mysql-${mysqlfullver}" | tee -a ${buildlog}mysql-${mysqlfullver}.log
+	if [ "`id -un ${mysqluser} 2>/dev/null`" != "${mysqluser}" -o "`id -gn ${mysqluser} 2>/dev/null`" != "${mysqluser}" ]
 	then
 		echo "Need ${mysqluser} user and ${mysqluser} group"
 		exit 1
@@ -302,7 +303,6 @@ then
 		mv ${builddir}mysql-${mysqlfullver} `mktemp -dp $oldbuilddir mysql-${mysqlfullver}.XXX` >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
 	fi
 
-	echo "START BUILD mysql-${mysqlfullver}" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 	if [ -e mysql-${mysqlfullver} ]
 	then
 		echo -n "Clean mysql-${mysqlfullver}..." | tee -a ${buildlog}mysql-${mysqlfullver}.log
@@ -376,7 +376,8 @@ fi
 #php
 if [ $phpbuild = "1" -a ! -e ${builddir}php-${phpver} ] || [ $phpreb = "1" -a -e ${builddir}php-${phpver} ]
 then
-	if [ "`id -un ${wwwuser} 2>/dev/null`" = "" -o "`id -ug ${wwwuser} 2>/dev/null`" = "" ]
+	echo "START BUILD php-${phpver}" | tee -a ${buildlog}php-${phpver}.log
+	if [ "`id -un ${wwwuser} 2>/dev/null`" != "${wwwuser}" -o "`id -gn ${wwwuser} 2>/dev/null`" != "${wwwuser}" ]
 	then
 		echo "Need ${wwwuser} user and ${wwwuser} group."
 		exit 1
@@ -681,7 +682,6 @@ then
 		echo "DONE BUILD curl-${curlver}" | tee -a ${buildlog}curl-${curlver}.log
 	fi
 
-	echo "START BUILD php-${phpver}" | tee -a ${buildlog}php-${phpver}.log
 	if [ -e ${builddir}php-${phpver} ]
 	then
 			mv ${builddir}php-${phpver} `mktemp -dp $oldbuilddir php-${phpver}.XXX` >> ${buildlog}php-${phpver}.log 2>&1
