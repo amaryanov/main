@@ -1,22 +1,25 @@
 #!/bin/sh
 
-#need: autoconf >= 2.13, g++, patch
+#Requirements:
+#	nginx: $wwwuser user
+#	mysql: $mysqluser user
+#	php: autoconf >= 2.13, g++, www user
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=0
-mysqlbuild=1
-phpbuild=0
+nginxbuild=1
+mysqlbuild=0
+phpbuild=1
 
 #configure
 nginxconf=0
-mysqlconf=1
+mysqlconf=0
 phpconf=0
 
 #rebuild
-nginxreb=0
+nginxreb=1
 mysqlreb=0
-phpreb=0
+phpreb=1
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -28,6 +31,10 @@ pngreb=0
 ncursesreb=0
 eventreb=0
 iconvreb=0
+
+#users
+export wwwuser="www"
+export mysqluser="mysql"
 
 #versions
 nginxver="0.7.67"
@@ -49,10 +56,6 @@ pngver="1.4.3"
 ncursesver="5.7"
 eventver="1.4.14b-stable"
 iconvver="1.13.1"
-
-#nginx conf
-export defaultip="127.0.0.1"
-export defaultport="8000"
 #####END SCRIPT CONFIG#####
 
 scriptdir=`dirname $(readlink -f $0)`/
@@ -160,6 +163,11 @@ fi
 if [ $nginxbuild = "1" -a ! -e ${builddir}nginx-${nginxver} ] || [ $nginxreb = "1" -a -e ${builddir}nginx-${nginxver} ]
 then
 	echo "START BUILD nginx-${nginxver}" | tee -a ${buildlog}nginx-${nginxver}.log
+	if [ "`id -un ${wwwuser}`" = "" ]
+	then
+		echo "Need ${wwwuser} user"
+		exit 1
+	fi
 	if [ -e ${builddir}nginx-${nginxver} ]
 	then
 		mv ${builddir}nginx-${nginxver} `mktemp -dp $oldbuilddir nginx-${nginxver}.XXX` >> ${buildlog}nginx-${nginxver}.log 2>&1
@@ -234,12 +242,16 @@ then
 	nginxdatadir=${datadir}nginx/
 	export nginxdir=${builddir}nginx-current/
 	mkdir -p ${nginxdatadir}
-	mv -f ${nginxdatadir}conf `mktemp -dp ${nginxdatadir} conf_back.XXX`
+	if [ -e ${nginxdatadir}conf ]
+	then
+		mv -f ${nginxdatadir}conf `mktemp -dp ${nginxdatadir} conf_back.XXX`
+	fi
 	cd ${builddir}nginx-${nginxver} #create symlinks for shorting pathes in config
 		ln -sf ../../data/nginx/log .
 		ln -sf ../../data/run .
 	cd $OLDPWD
 	cp -r ${scriptdir}conf/nginx/conf ${nginxdatadir}
+	sed -i 's/user www/user '${wwwuser}'/' ${nginxdatadir}conf/nginx.conf
 	${scriptdir}conf/nginx/init.d.sh > ${nginxdatadir}init.d
 	chmod 755 ${nginxdatadir}init.d
 	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
@@ -248,6 +260,11 @@ fi
 #mysql
 if [ $mysqlbuild = "1" -a ! -e ${builddir}mysql-${mysqlfullver} ] || [ $mysqlreb = "1" -a -e ${builddir}mysql-${mysqlfullver} ]
 then
+	if [ "`id -un ${mysqluser}`" = "" -o "`id -ug ${mysqluser}`" = "" ]
+	then
+		echo "Need ${mysqluser} user and ${mysqluser} group"
+		exit 1
+	fi
 	if [ ! -e ${builddir}other/ncurses-${ncursesver} -o $ncursesreb = "1" ]
 	then
 		echo "START BUILD ncurses-${ncursesver}" | tee -a ${buildlog}ncurses-${ncursesver}.log
@@ -322,7 +339,6 @@ then
 				--with-zlib-dir=${builddir}other/zlib-${zlibver} \
 				--with-extra-charsets=ascii,cp1251,koi8r,latin1,latin2 \
 				--with-plugins=innobase,myisam,partition,myisammrg \
-				--with-mysqld-user=mysql \
 				--with-unix-socket-path=${datadir}run/mysql.sock >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 && \
 		make >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 && \
 		make install >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
@@ -352,7 +368,7 @@ then
 	${scriptdir}/conf/mysql/init.d.sh > ${mysqldatadir}init.d
 	chmod 755 ${mysqldatadir}init.d
 	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
-	sudo chown -R mysql:mysql ${mysqldatadir}
+	sudo chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
 	sudo chmod a+w ${datadir}run
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
@@ -360,6 +376,11 @@ fi
 #php
 if [ $phpbuild = "1" -a ! -e ${builddir}php-${phpver} ] || [ $phpreb = "1" -a -e ${builddir}php-${phpver} ]
 then
+	if [ "`id -un ${wwwuser}`" = "" -o "`id -ug ${wwwuser}`" = "" ]
+	then
+		echo "Need ${wwwuser} user and ${wwwuser} group."
+		exit 1
+	fi
 	if [ "`which autoconf`" = "" -o "`autoconf --version | head -n 1 | tr -d '\n' | sed 's/Autoconf version [2-9]\.[1-9][3-9]//'`" != "" ]
 	then
 		echo "Need autoconf version >= 2.13"
@@ -368,11 +389,6 @@ then
 	if [ "`which g++`" = "" ]
 	then
 		echo "Need g++"
-		exit 1
-	fi
-	if [ "`which patch`" = "" ]
-	then
-		echo "Need patch"
 		exit 1
 	fi
 	if [ ! -e ${builddir}other/libpng-${pngver} -o $pngreb = "1" ]
@@ -752,6 +768,8 @@ then
 	export phpdir=${builddir}php-current/
 	export phpdatadir=${datadir}php/
 	mkdir -p ${phpdatadir}tmp
+	mkdir -p ${phpdatadir}conf
+	mkdir -p ${phpdatadir}log
 	${scriptdir}/conf/php/php-fpm.conf.sh > ${phpdatadir}conf/php-fpm.conf
 	${scriptdir}/conf/php/init.d.sh > ${phpdatadir}init.d
 	chmod 755 ${phpdatadir}init.d

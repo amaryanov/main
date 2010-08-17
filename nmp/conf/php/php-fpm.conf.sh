@@ -93,15 +93,15 @@ listen = ${datadir}run/php.sock
 ; BSD-derived systems allow connections regardless of permissions. 
 ; Default Values: user and group are set as the running user
 ;                 mode is set to 0666
-listen.owner = www
-listen.group = www
+listen.owner = ${wwwuser}
+listen.group = ${wwwuser}
 listen.mode = 0600
 
 ; Unix user/group of processes
 ; Note: The user is mandatory. If the group is not set, the default user's group
 ;       will be used.
-user = www
-group = www
+user = ${wwwuser}
+group = ${wwwuser}
 
 ; Choose how the process manager will control the number of child processes.
 ; Possible Values:
