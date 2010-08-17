@@ -344,13 +344,15 @@ then
 	fi
 	mkdir -p ${mysqldatadir}/conf/
 	mkdir -p ${mysqldatadir}/tmp/
-	mkdir -p ${mysqldatadir}/log
+	mkdir -p ${mysqldatadir}/log/bin
+	mkdir -p ${mysqldatadir}/log/innodb
 	mkdir -p ${mysqldatadir}/data/db
 	mkdir -p ${mysqldatadir}/data/innodb
 	${scriptdir}/conf/mysql/mysql.conf.sh > ${mysqldatadir}/conf/my.cnf
 	${scriptdir}/conf/mysql/init.d.sh > ${mysqldatadir}init.d
 	chmod 755 ${mysqldatadir}init.d
 	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
+	sudo chown -R mysql:mysql ${mysqldatadir}
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
 

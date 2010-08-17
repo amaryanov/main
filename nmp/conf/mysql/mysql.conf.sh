@@ -20,8 +20,9 @@ general_log
 general_log_file = ${mysqldatadir}log/general.log
 log-error = ${mysqldatadir}log/error.log
 log-isam = ${mysqldatadir}log/myisam.log
-log-bin=${mysqldatadir}log/log-bin.log
+log-bin=${mysqldatadir}log/bin/log
 log-bin-index = ${mysqldatadir}log/bin-index.log
+expire_logs_days = 10
 log-slow-admin-statements
 log-slow-slave-statements
 log-tc=${mysqldatadir}log/log-tc.log
@@ -36,7 +37,7 @@ slow_query_log_file = ${mysqldatadir}log/slow.log
 log-queries-not-using-indexes
 log-slave-updates
 innodb=ON
-innodb_data_home_dir = ${mysqldatadir}innodb/
+innodb_data_home_dir = ${mysqldatadir}data/innodb/
 innodb_data_file_path = ibdata1:10M:autoextend
 innodb_log_group_home_dir = ${mysqldatadir}log/innodb/
 innodb_buffer_pool_size = 16M
@@ -68,7 +69,7 @@ skip-networking
 
 # Replication Master Server (default)
 # binary logging is required for replication
-log-bin=${mysqldatadir}log/mysql-bin
+#log-bin=${mysqldatadir}log/mysql-bin
 
 # binary logging format - mixed recommended
 binlog_format=mixed
