@@ -3,7 +3,7 @@
 #Requirements:
 #	nginx: $wwwuser user
 #	mysql: $mysqluser user
-#	php: autoconf >= 2.13, g++, www user
+#	php:   autoconf >= 2.13, g++, www user
 
 #####SCRIPT CONFIG#####
 #build
