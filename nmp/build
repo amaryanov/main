@@ -163,7 +163,7 @@ fi
 if [ $nginxbuild = "1" -a ! -e ${builddir}nginx-${nginxver} ] || [ $nginxreb = "1" -a -e ${builddir}nginx-${nginxver} ]
 then
 	echo "START BUILD nginx-${nginxver}" | tee -a ${buildlog}nginx-${nginxver}.log
-	if [ "`id -un ${wwwuser}`" = "" ]
+	if [ "`id -un ${wwwuser} 2>/dev/null`" = "" ]
 	then
 		echo "Need ${wwwuser} user"
 		exit 1
@@ -260,7 +260,7 @@ fi
 #mysql
 if [ $mysqlbuild = "1" -a ! -e ${builddir}mysql-${mysqlfullver} ] || [ $mysqlreb = "1" -a -e ${builddir}mysql-${mysqlfullver} ]
 then
-	if [ "`id -un ${mysqluser}`" = "" -o "`id -ug ${mysqluser}`" = "" ]
+	if [ "`id -un ${mysqluser} 2>/dev/null`" = "" -o "`id -ug ${mysqluser} 2>/dev/null`" = "" ]
 	then
 		echo "Need ${mysqluser} user and ${mysqluser} group"
 		exit 1
@@ -376,7 +376,7 @@ fi
 #php
 if [ $phpbuild = "1" -a ! -e ${builddir}php-${phpver} ] || [ $phpreb = "1" -a -e ${builddir}php-${phpver} ]
 then
-	if [ "`id -un ${wwwuser}`" = "" -o "`id -ug ${wwwuser}`" = "" ]
+	if [ "`id -un ${wwwuser} 2>/dev/null`" = "" -o "`id -ug ${wwwuser} 2>/dev/null`" = "" ]
 	then
 		echo "Need ${wwwuser} user and ${wwwuser} group."
 		exit 1
