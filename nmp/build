@@ -234,14 +234,14 @@ then
 	nginxdatadir=${datadir}nginx/
 	export nginxdir=${builddir}nginx-current/
 	mkdir -p ${nginxdatadir}
-	mv -f ${nginxdatadir}conf ${nginxdatadir}conf_back
+	mv -f ${nginxdatadir}conf `mktemp -dp ${nginxdatadir} conf_back.XXX`
 	cd ${builddir}nginx-${nginxver} #create symlinks for shorting pathes in config
 		ln -sf ../../data/nginx/log .
 		ln -sf ../../data/run .
 	cd $OLDPWD
 	cp -r ${scriptdir}conf/nginx/conf ${nginxdatadir}
-	${scriptdir}conf/nginx/init.d.sh > ${nginxdatadir}conf/init.d
-	chmod 755 ${nginxdatadir}conf/init.d
+	${scriptdir}conf/nginx/init.d.sh > ${nginxdatadir}init.d
+	chmod 755 ${nginxdatadir}init.d
 	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
 fi
 
@@ -348,8 +348,8 @@ then
 	mkdir -p ${mysqldatadir}/data/db
 	mkdir -p ${mysqldatadir}/data/innodb
 	${scriptdir}/conf/mysql/mysql.conf.sh > ${mysqldatadir}/conf/my.cnf
-	${scriptdir}/conf/mysql/init.d.sh > ${mysqldatadir}conf/init.d
-	chmod 755 ${mysqldatadir}conf/init.d
+	${scriptdir}/conf/mysql/init.d.sh > ${mysqldatadir}init.d
+	chmod 755 ${mysqldatadir}init.d
 	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
@@ -750,8 +750,8 @@ then
 	export phpdatadir=${datadir}php/
 	mkdir -p ${phpdatadir}tmp
 	${scriptdir}/conf/php/php-fpm.conf.sh > ${phpdatadir}conf/php-fpm.conf
-	${scriptdir}/conf/php/init.d.sh > ${phpdatadir}conf/init.d
-	chmod 755 ${phpdatadir}conf/init.d
+	${scriptdir}/conf/php/init.d.sh > ${phpdatadir}init.d
+	chmod 755 ${phpdatadir}init.d
 	echo "DONE" | tee -a ${buildlog}php-${phpver}.log
 fi
 
