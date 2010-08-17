@@ -10,7 +10,7 @@ socket		= ${datadir}run/mysql.sock
 
 # The MySQL server
 [mysqld]
-user=mysql
+user=${mysqluser}
 datadir	= ${mysqldatadir}data/db
 port		= 3306
 socket		= ${datadir}run/mysql.sock
