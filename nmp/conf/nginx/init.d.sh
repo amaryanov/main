@@ -51,7 +51,7 @@ case "\$1" in
 	start)
 		echo -n "Starting nginx "
 
-		cd \$(dirname `dirname \$nginxpid`)
+		cd \$(dirname \`dirname \$nginxpid\`)
 			\$nginx
 		cd \$OLDPWD
 
