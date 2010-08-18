@@ -51,7 +51,9 @@ case "\$1" in
 	start)
 		echo -n "Starting nginx "
 
-		\$nginx
+		cd \$(dirname `dirname \$nginxpid`)
+			\$nginx
+		cd \$OLDPWD
 
 		if [ "\$?" != 0 ] ; then
 			echo " failed"
