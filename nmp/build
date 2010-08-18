@@ -78,6 +78,7 @@ mkdir -p $archdir
 mkdir -p $datadir
 mkdir -p $buildlog
 mkdir -p ${datadir}run
+mkdir -p ${datadir}sites
 chmod 777 ${datadir}run
 
 cd $srcdir
