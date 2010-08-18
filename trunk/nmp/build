@@ -233,9 +233,11 @@ then
 	cd ${builddir}
 		ln -sf nginx-${nginxver} nginx-current
 	cd $OLDPWD
+	#create symlinks for shortness config
 	cd ${builddir}nginx-${nginxver}
 		ln -sf ../../data/nginx/log .
 		ln -sf ../../data/run .
+		ln -sf ../../data/sites .
 	cd $OLDPWD
 	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
 	echo "DONE BUILD nginx-${nginxver}" | tee -a ${buildlog}nginx-${nginxver}.log
