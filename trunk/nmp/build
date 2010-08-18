@@ -4,7 +4,8 @@
 #	nginx: $wwwuser user
 #	mysql: $mysqluser user
 #	php:   autoconf >= 2.13, g++, www user
-#Dont forget to set appropriate rights to directories in data
+#Recommendation:
+#set appropriate rights to directories in data: nginx, php, sites - $wwwuser
 
 #####SCRIPT CONFIG#####
 #build
