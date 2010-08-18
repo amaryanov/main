@@ -10,12 +10,12 @@
 #build
 nginxbuild=0
 mysqlbuild=0
-phpbuild=1
+phpbuild=0
 
 #configure
 nginxconf=0
-mysqlconf=0
-phpconf=1
+mysqlconf=1
+phpconf=0
 
 #rebuild
 nginxreb=0
@@ -35,7 +35,9 @@ iconvreb=0
 
 #users
 export wwwuser="www"
-export mysqluser="mysql"
+#export mysqluser="mysql"
+#export wwwuser="`id -un`"
+#export mysqluser="`id -un`"
 
 #versions
 nginxver="0.7.67"
@@ -76,6 +78,7 @@ mkdir -p $archdir
 mkdir -p $datadir
 mkdir -p $buildlog
 mkdir -p ${datadir}run
+chmod 777 ${datadir}run
 
 cd $srcdir
 
@@ -371,26 +374,19 @@ then
 	${scriptdir}/conf/mysql/mysql.conf.sh > ${mysqldatadir}/conf/my.cnf
 	${scriptdir}/conf/mysql/init.d.sh > ${mysqldatadir}init.d
 	chmod 755 ${mysqldatadir}init.d
-	if [ "`id -un`" = "root" ]
-	then
-		chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
-	elif [ "`which sudo`" != "" ]
-		then
-			sudo chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
-	else
-		echo "You will need to run chown -R ${mysqluser}:${mysqluser} ${mysqldatadir} as root."
-	fi
 	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
-	if [ "`id -un`" = "root" ]
+	if [ $mysqluser != "`id -un`" ]
 	then
-		chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
-	elif [ "`which sudo`" != "" ]
+		if [ "`id -un`" = "root" ]
 		then
-			sudo chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
-	else
-		echo "You will need to run chown -R ${mysqluser}:${mysqluser} ${mysqldatadir} as root."
+			chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
+		elif [ "`which sudo`" != "" ]
+			then
+				sudo chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
+		else
+			echo "You will need to run chown -R ${mysqluser}:${mysqluser} ${mysqldatadir} as root."
+		fi
 	fi
-	sudo chmod a+w ${datadir}run
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
 
