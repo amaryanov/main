@@ -35,7 +35,7 @@ iconvreb=0
 
 #users
 export wwwuser="www"
-#export mysqluser="mysql"
+export mysqluser="mysql"
 #export wwwuser="`id -un`"
 #export mysqluser="`id -un`"
 
