@@ -13,9 +13,9 @@ mysqlbuild=0
 phpbuild=0
 
 #configure
-nginxconf=0
+nginxconf=1
 mysqlconf=1
-phpconf=0
+phpconf=1
 
 #rebuild
 nginxreb=0
