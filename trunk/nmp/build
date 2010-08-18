@@ -10,12 +10,12 @@
 #build
 nginxbuild=0
 mysqlbuild=0
-phpbuild=0
+phpbuild=1
 
 #configure
-nginxconf=1
-mysqlconf=1
-phpconf=1
+nginxconf=0
+mysqlconf=0
+phpconf=0
 
 #rebuild
 nginxreb=0
