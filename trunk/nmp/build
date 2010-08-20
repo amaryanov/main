@@ -407,7 +407,7 @@ then
 			" And then ${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf"
 		fi
 	else
-		mysqlrightsok=0
+		mysqlrightsok=1
 	fi
 	if [ $mysqlrightsok = "1" ]
 	then
