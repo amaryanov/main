@@ -9,13 +9,13 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=1
-mysqlbuild=0
+nginxbuild=0
+mysqlbuild=1
 phpbuild=0
 
 #configure
-nginxconf=1
-mysqlconf=0
+nginxconf=0
+mysqlconf=1
 phpconf=0
 
 #rebuild
@@ -389,7 +389,6 @@ then
 	${scriptdir}/conf/mysql/mysql.conf.sh > ${mysqldatadir}/conf/my.cnf
 	${scriptdir}/conf/mysql/init.d.sh > ${mysqldatadir}init.d
 	chmod 755 ${mysqldatadir}init.d
-	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
 	if [ $mysqluser != "`id -un`" ]
 	then
 		if [ "`id -un`" = "root" ]
@@ -402,6 +401,7 @@ then
 			echo "You will need to run chown -R ${mysqluser}:${mysqluser} ${mysqldatadir} as root."
 		fi
 	fi
+	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
 
