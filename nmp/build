@@ -426,7 +426,7 @@ then
 		exit 1
 	fi
 	ver="0`autoconf --version 2>/dev/null | head -n 1 | sed 's/^.*\([0-9]\)\.\([0-9][0-9]\)$/\1\2/'`"
-	ver=`expr $ver + 1 - 1`
+	ver=`expr $ver + 1 - 1 2>/dev/null`
 	if [ "$ver" -lt "213" ]
 	then
 		echo "Need autoconf version >= 2.13"
