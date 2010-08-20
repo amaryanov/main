@@ -9,12 +9,12 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=0
+nginxbuild=1
 mysqlbuild=0
-phpbuild=1
+phpbuild=0
 
 #configure
-nginxconf=0
+nginxconf=1
 mysqlconf=0
 phpconf=0
 
@@ -62,7 +62,7 @@ eventver="1.4.14b-stable"
 iconvver="1.13.1"
 #####END SCRIPT CONFIG#####
 
-scriptdir=`dirname $(readlink -f $0)`/
+scriptdir=$(cd `dirname $0` && pwd && cd $OLDPWD)/
 
 topdir=$PWD/
 srcdir=${topdir}src/
