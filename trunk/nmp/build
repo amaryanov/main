@@ -23,7 +23,7 @@ nginxreb=0
 mysqlreb=0
 phpreb=0
 zlibreb=0
-opsslreb=0
+opsslreb=1
 curlreb=0
 mcryptreb=0
 mhashreb=0
@@ -166,6 +166,8 @@ then
 				-I${builddir}other/zlib-${zlibver}/include \
 				-Wl,-rpath \
 				-Wl,${builddir}other/zlib-${zlibver}/lib \
+				-Wl,-rpath \
+				-Wl,${builddir}other/openssl-${opsslver}/lib \
 				threads zlib shared >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
 			make >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
 			make test >> ${buildlog}openssl-${opsslver}.log 2>&1 && \
