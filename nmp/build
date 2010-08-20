@@ -84,6 +84,18 @@ chmod 777 ${datadir}run
 
 cd $srcdir
 
+if [ $nginxbuild = "1" -a -e ${builddir}nginx-${nginxver} ]
+then
+	nginxbuild="0"
+fi
+if [ $mysqlbuild = "1" -a -e ${builddir}mysql-${nginxver} ]
+then
+	mysqlbuild="0"
+fi
+if [ $phpbuild = "1" -a -e ${builddir}php-${nginxver} ]
+then
+	phpbuild="0"
+fi
 #zlib
 if [ $phpbuild = "1" -o $mysqlbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" ] && [ ! -e ${builddir}other/zlib-${zlibver} -o $zlibreb = "1" ] || [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
@@ -109,7 +121,7 @@ then
 		echo -n "Make zlib-${zlibver}..." | tee -a ${buildlog}zlib-${zlibver}.log
 		if [ -e ${builddir}other/zlib-${zlibver} ]
 		then
-			mv ${builddir}other/zlib-${zlibver} `mktemp -dp $oldbuilddir zlib-${zlibver}.XXX` >> ${buildlog}zlib-${zlibver}.log 2>&1
+			mv ${builddir}other/zlib-${zlibver} `mktemp -d ${oldbuilddir}zlib-${zlibver}.XXX` >> ${buildlog}zlib-${zlibver}.log 2>&1
 		fi
 		cd zlib-${zlibver}
 			./configure --prefix=${builddir}other/zlib-${zlibver} >> ${buildlog}zlib-${zlibver}.log 2>&1 && \
@@ -146,7 +158,7 @@ then
 		echo -n "Make openssl-${opsslver}..." | tee -a ${buildlog}openssl-${opsslver}.log
 		if [ -e ${builddir}other/openssl-${opsslver} ]
 		then
-			mv ${builddir}other/openssl-${opsslver} `mktemp -dp $oldbuilddir openssl-${opsslver}.XXX` >> ${buildlog}openssl-${opsslver}.log 2>&1
+			mv ${builddir}other/openssl-${opsslver} `mktemp -d ${oldbuilddir}openssl-${opsslver}.XXX` >> ${buildlog}openssl-${opsslver}.log 2>&1
 		fi
 		cd openssl-${opsslver}
 			./config --prefix=${builddir}other/openssl-${opsslver} \
@@ -176,7 +188,7 @@ then
 	fi
 	if [ -e ${builddir}nginx-${nginxver} ]
 	then
-		mv ${builddir}nginx-${nginxver} `mktemp -dp $oldbuilddir nginx-${nginxver}.XXX` >> ${buildlog}nginx-${nginxver}.log 2>&1
+		mv ${builddir}nginx-${nginxver} `mktemp -d ${oldbuilddir}nginx-${nginxver}.XXX` >> ${buildlog}nginx-${nginxver}.log 2>&1
 	fi
 	if [ -e nginx-${nginxver} ]
 	then
@@ -257,10 +269,11 @@ then
 	mkdir -p ${nginxdatadir}log
 	if [ -e ${nginxdatadir}conf ]
 	then
-		mv -f ${nginxdatadir}conf `mktemp -dp ${nginxdatadir} conf_back.XXX`
+		mv -f ${nginxdatadir}conf `mktemp -d ${nginxdatadir}conf_back.XXX`
 	fi
 	cp -r ${scriptdir}conf/nginx/conf ${nginxdatadir}
-	sed -i 's/user www/user '${wwwuser}'/' ${nginxdatadir}conf/nginx.conf
+	sed 's/user www/user '${wwwuser}'/' ${nginxdatadir}conf/nginx.conf > ${nginxdatadir}conf/nginx.conf_back && \
+		mv ${nginxdatadir}conf/nginx.conf_back ${nginxdatadir}conf/nginx.conf || exit
 	${scriptdir}conf/nginx/init.d.sh > ${nginxdatadir}init.d
 	chmod 755 ${nginxdatadir}init.d
 	echo "DONE" | tee -a ${buildlog}nginx-${nginxver}.log
@@ -280,7 +293,7 @@ then
 		echo "START BUILD ncurses-${ncursesver}" | tee -a ${buildlog}ncurses-${ncursesver}.log
 		if [ -e ${builddir}other/ncurses-${ncursesver} ]
 		then
-			mv ${builddir}other/ncurses-${ncursesver} `mktemp -dp $oldbuilddir ncurses-${ncursesver}.XXX` >> ${buildlog}ncurses-${ncursesver}.log 2>&1
+			mv ${builddir}other/ncurses-${ncursesver} `mktemp -d ${oldbuilddir}ncurses-${ncursesver}.XXX` >> ${buildlog}ncurses-${ncursesver}.log 2>&1
 		fi
 		if [ -e ncurses-${ncursesver} ]
 		then
@@ -309,7 +322,7 @@ then
 
 	if [ -e ${builddir}mysql-${mysqlfullver} ]
 	then
-		mv ${builddir}mysql-${mysqlfullver} `mktemp -dp $oldbuilddir mysql-${mysqlfullver}.XXX` >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
+		mv ${builddir}mysql-${mysqlfullver} `mktemp -d ${oldbuilddir}mysql-${mysqlfullver}.XXX` >> ${buildlog}mysql-${mysqlfullver}.log 2>&1
 	fi
 
 	if [ -e mysql-${mysqlfullver} ]
@@ -365,7 +378,7 @@ then
 	export mysqlinstalldir=${builddir}mysql-current/ #export for mysql.conf.sh
 	if [ -e ${mysqldatadir}/conf ]
 	then
-		mv ${mysqldatadir}/conf `mktemp -dp ${mysqldatadir} conf_back.XXX`
+		mv ${mysqldatadir}/conf `mktemp -d ${mysqldatadir}conf_back.XXX`
 	fi
 	mkdir -p ${mysqldatadir}/conf/
 	mkdir -p ${mysqldatadir}/tmp/
@@ -416,7 +429,7 @@ then
 		echo "START BUILD libpng-${pngver}" | tee -a ${buildlog}libpng-${pngver}.log
 		if [ -e ${builddir}other/libpng-${pngver} ]
 		then
-			mv ${builddir}other/libpng-${pngver} `mktemp -dp $oldbuilddir libpng-${pngver}.XXX` >> ${buildlog}libpng-${pngver}.log 2>&1
+			mv ${builddir}other/libpng-${pngver} `mktemp -d ${oldbuilddir}libpng-${pngver}.XXX` >> ${buildlog}libpng-${pngver}.log 2>&1
 		fi
 		if [ -e libpng-${pngver} ]
 		then
@@ -449,7 +462,7 @@ then
 		echo "START BUILD libjpeg-${jpegver}" | tee -a ${buildlog}libjpeg-${jpegver}.log
 		if [ -e ${builddir}other/libjpeg-${jpegver} ]
 		then
-			mv ${builddir}other/libjpeg-${jpegver} `mktemp -dp $oldbuilddir libjpeg-${jpegver}.XXX` >> ${buildlog}libjpeg-${jpegver}.log 2>&1
+			mv ${builddir}other/libjpeg-${jpegver} `mktemp -d ${oldbuilddir}libjpeg-${jpegver}.XXX` >> ${buildlog}libjpeg-${jpegver}.log 2>&1
 		fi
 		if [ -e jpeg-${jpegver} ]
 		then
@@ -480,7 +493,7 @@ then
 		echo "START BUILD libxml2-${libxmlver}" | tee -a ${buildlog}libxml2-${libxmlver}.log
 		if [ -e ${builddir}other/libxml2-${libxmlver} ]
 		then
-			mv ${builddir}other/libxml2-${libxmlver} `mktemp -dp $oldbuilddir libxml2-${libxmlver}.XXX` >> ${buildlog}libxml2-${libxmlver}.log 2>&1
+			mv ${builddir}other/libxml2-${libxmlver} `mktemp -d ${oldbuilddir}libxml2-${libxmlver}.XXX` >> ${buildlog}libxml2-${libxmlver}.log 2>&1
 		fi
 		if [ -e libxml2-${libxmlver} ]
 		then
@@ -513,7 +526,7 @@ then
 		echo "START BUILD mhash-${mhashver}" | tee -a ${buildlog}mhash-${mhashver}.log
 		if [ -e ${builddir}other/mhash-${mhashver} ]
 		then
-			mv ${builddir}other/mhash-${mhashver} `mktemp -dp $oldbuilddir mhash-${mhashver}.XXX` >> ${buildlog}mhash-${mhashver}.log 2>&1
+			mv ${builddir}other/mhash-${mhashver} `mktemp -d ${oldbuilddir}mhash-${mhashver}.XXX` >> ${buildlog}mhash-${mhashver}.log 2>&1
 		fi
 		if [ -e mhash-${mhashver} ]
 		then
@@ -544,7 +557,7 @@ then
 		echo "START BUILD libmcrypt-${mcryptver}" | tee -a ${buildlog}libmcrypt-${mcryptver}.log
 		if [ -e ${builddir}other/libmcrypt-${mcryptver} ]
 		then
-			mv ${builddir}other/libmcrypt-${mcryptver} `mktemp -dp $oldbuilddir libmcrypt-${mcryptver}.XXX` >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1
+			mv ${builddir}other/libmcrypt-${mcryptver} `mktemp -d ${oldbuilddir}libmcrypt-${mcryptver}.XXX` >> ${buildlog}libmcrypt-${mcryptver}.log 2>&1
 		fi
 		if [ -e libmcrypt-${mcryptver} ]
 		then
@@ -575,7 +588,7 @@ then
 		echo "START BUILD libevent-${eventver}" | tee -a ${buildlog}libevent-${eventver}.log
 		if [ -e ${builddir}other/libevent-${eventver} ]
 		then
-			mv ${builddir}other/libevent-${eventver} `mktemp -dp $oldbuilddir libevent-${eventver}.XXX` >> ${buildlog}libevent-${eventver}.log 2>&1
+			mv ${builddir}other/libevent-${eventver} `mktemp -d ${oldbuilddir}libevent-${eventver}.XXX` >> ${buildlog}libevent-${eventver}.log 2>&1
 		fi
 		if [ -e libevent-${eventver} ]
 		then
@@ -606,7 +619,7 @@ then
 		echo "START BUILD libiconv-${iconvver}" | tee -a ${buildlog}libiconv-${iconvver}.log
 		if [ -e ${builddir}other/libiconv-${iconvver} ]
 		then
-			mv ${builddir}other/libiconv-${iconvver} `mktemp -dp $oldbuilddir libiconv-${iconvver}.XXX` >> ${buildlog}libiconv-${iconvver}.log 2>&1
+			mv ${builddir}other/libiconv-${iconvver} `mktemp -d ${oldbuilddir}libiconv-${iconvver}.XXX` >> ${buildlog}libiconv-${iconvver}.log 2>&1
 		fi
 		if [ -e libiconv-${iconvver} ]
 		then
@@ -637,7 +650,7 @@ then
 		echo "START BUILD curl-${curlver}" | tee -a ${buildlog}curl-${curlver}.log
 		if [ -e ${builddir}other/curl-${curlver} ]
 		then
-			mv ${builddir}other/curl-${curlver} `mktemp -dp $oldbuilddir curl-${curlver}.XXX` >> ${buildlog}curl-${curlver}.log 2>&1
+			mv ${builddir}other/curl-${curlver} `mktemp -d ${oldbuilddir}curl-${curlver}.XXX` >> ${buildlog}curl-${curlver}.log 2>&1
 		fi
 		if [ -e curl-${curlver} ]
 		then
@@ -703,7 +716,7 @@ then
 
 	if [ -e ${builddir}php-${phpver} ]
 	then
-			mv ${builddir}php-${phpver} `mktemp -dp $oldbuilddir php-${phpver}.XXX` >> ${buildlog}php-${phpver}.log 2>&1
+			mv ${builddir}php-${phpver} `mktemp -d ${oldbuilddir}php-${phpver}.XXX` >> ${buildlog}php-${phpver}.log 2>&1
 	fi
 	if [ -e php-${phpver} ]
 	then
