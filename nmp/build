@@ -389,19 +389,30 @@ then
 	${scriptdir}/conf/mysql/mysql.conf.sh > ${mysqldatadir}/conf/my.cnf
 	${scriptdir}/conf/mysql/init.d.sh > ${mysqldatadir}init.d
 	chmod 755 ${mysqldatadir}init.d
+	mysqlrightsok=0
+	sudo=""
 	if [ $mysqluser != "`id -un`" ]
 	then
 		if [ "`id -un`" = "root" ]
 		then
 			chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
+			mysqlrightsok=1
 		elif [ "`which sudo`" != "" ]
 			then
 				sudo chown -R ${mysqluser}:${mysqluser} ${mysqldatadir}
+				sudo="sudo"
+				mysqlrightsok=1
 		else
-			echo "You will need to run chown -R ${mysqluser}:${mysqluser} ${mysqldatadir} as root."
+			echo "You will need to run chown -R ${mysqluser}:${mysqluser} ${mysqldatadir} as root." \
+			" And then ${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf"
 		fi
+	else
+		mysqlrightsok=0
 	fi
-	${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
+	if [ $mysqlrightsok = "1" ]
+	then
+		$sudo ${mysqlinstalldir}/bin/mysql_install_db --defaults-file=${mysqldatadir}/conf/my.cnf >> ${buildlog}mysql-${mysqlfullver}.log 2>&1 || exit 1
+	fi
 	echo "DONE" | tee -a ${buildlog}mysql-${mysqlfullver}.log
 fi
 
