@@ -12,11 +12,7 @@ cat << EOF
 # Description:       starts the PHP FastCGI Process Manager daemon
 ### END INIT INFO
 php_fpm_BIN=${phpdir}sbin/php-fpm
-php_fpm_CONF=${phpdatadir}conf/php-fpm.conf
 php_fpm_PID=${datadir}run/php.pid
-
-
-php_opts="--fpm-config \$php_fpm_CONF"
 
 
 wait_for_pid () {
@@ -52,7 +48,7 @@ case "\$1" in
 	start)
 		echo -n "Starting php-fpm "
 
-		\$php_fpm_BIN \$php_opts
+		\$php_fpm_BIN
 
 		if [ "\$?" != 0 ] ; then
 			echo " failed"
