@@ -9,21 +9,21 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=1
-mysqlbuild=1
-phpbuild=1
-svnbuild=1
+nginxbuild=0
+mysqlbuild=0
+phpbuild=0
+svnbuild=0
 
 #symlink
-nginxsym=1
-mysqlsym=1
-phpsym=1
-svnsym=1
+nginxsym=0
+mysqlsym=0
+phpsym=0
+svnsym=0
 
 #configure
-nginxconf=1
-mysqlconf=1
-phpconf=1
+nginxconf=0
+mysqlconf=0
+phpconf=0
 
 #rebuild
 nginxreb=0
@@ -87,6 +87,7 @@ dl()
 	fi
 	case "$dler" in
 		'curl')
+			curl -OsLC - -w "%{size_download} %{http_code}" $1
 			;;
 		'wget')
 			;;
