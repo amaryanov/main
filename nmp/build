@@ -68,8 +68,32 @@ eventver="1.4.14b-stable"
 iconvver="1.13.1"
 #####END SCRIPT CONFIG#####
 
-wget=''
+dl()
+{
+	#look for downloader
+	if [ "x${dler}" = 'x' ]
+	then
+		if [ "x`which curl`" != 'x' ]
+		then
+			dler='curl'
+		elif [ "x`which wget`" != 'x' ]
+		then
+			dler='wget'
+		else
+			echo 'I need downloader(wget|curl)'
+			exit 1
+		fi
+		echo $dler
+	fi
+	case "$dler" in
+		'curl')
+			;;
+		'wget')
+			;;
+	esac
 #curl -OsLC - -w "%{size_download}" http://apache.infocom.ua//apr/apr-util-1.3.9.tar.gz
+}
+
 
 scriptdir=$(cd `dirname $0` && pwd && cd $OLDPWD)/
 
