@@ -9,7 +9,7 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=0
+nginxbuild=1
 mysqlbuild=0
 phpbuild=0
 svnbuild=0
@@ -70,6 +70,16 @@ iconvver="1.13.1"
 
 dl()
 {
+	if [ "x$1" = 'x' ]
+	then
+		echo 'Please provide URL to download.'
+		return 1
+	fi
+	if [ "x$2" = 'x' ]
+	then
+		echo 'Please provide log file'
+		return 1
+	fi
 	#look for downloader
 	if [ "x${dler}" = 'x' ]
 	then
@@ -80,21 +90,62 @@ dl()
 		then
 			dler='wget'
 		else
-			echo 'I need downloader(wget|curl)'
+			echo 'I need downloader(wget or curl)'
 			exit 1
 		fi
-		echo $dler
 	fi
 	case "$dler" in
 		'curl')
-			curl -OsLC - -w "%{size_download} %{http_code}" $1
+			echo -n "Download $1..." | tee -a $2
+			res="`curl -OsLC - -w "%{size_download} %{http_code}" $1 2>>$2`"
+			curlret=$?
+			dlsize="`echo $res | cut -d ' ' -f 1`"
+			httpcode="`echo $res | cut -d ' ' -f 2`"
+			if [ $curlret = "18" -o $curlret = "0" ]
+			then
+				echo -n "DONE"  | tee -a $2
+			else
+				echo -n "There was an error while downloading $1. return code $curlret. " | tee -a $2
+			fi
+			echo " download size = ${dlsize}, HTTP code = ${httpcode}." | tee -a $2
 			;;
 		'wget')
+			echo -n "Download $1..." | tee -a $2
+			wget -c $1 >> $2 2>&1
+			if [ "$?" != "0" ]
+			then
+				echo "There was an error while downloading $1" | tee -a $2
+			else
+				echo "DONE" | tee -a $2
+			fi
 			;;
 	esac
-#curl -OsLC - -w "%{size_download}" http://apache.infocom.ua//apr/apr-util-1.3.9.tar.gz
 }
 
+if [ $nginxbuild = "1" -a -e ${builddir}main/nginx/${nginxver} ]
+then
+	nginxbuild="0"
+fi
+if [ $mysqlbuild = "1" -a -e ${builddir}mysql-${nginxver} ]
+then
+	mysqlbuild="0"
+fi
+if [ $phpbuild = "1" -a -e ${builddir}php-${nginxver} ]
+then
+	phpbuild="0"
+fi
+
+if [ $nginxbuild = "0" -a \
+	$mysqlbuild = "0" -a \
+	$phpbuild = "0" -a \
+	$nginxreb = "0" -a \
+	$mysqlreb = "0" -a \
+	$phpreb = "0" \
+]
+then
+	echo 'Nothing to do.'
+	exit 0
+fi
 
 scriptdir=$(cd `dirname $0` && pwd && cd $OLDPWD)/
 
@@ -152,19 +203,6 @@ mkdir -p ${datadir}sites
 chmod 777 ${datadir}run
 
 cd $srcdir
-
-if [ $nginxbuild = "1" -a -e ${builddir}main/nginx/${nginxver} ]
-then
-	nginxbuild="0"
-fi
-if [ $mysqlbuild = "1" -a -e ${builddir}mysql-${nginxver} ]
-then
-	mysqlbuild="0"
-fi
-if [ $phpbuild = "1" -a -e ${builddir}php-${nginxver} ]
-then
-	phpbuild="0"
-fi
 #zlib
 if [ $phpbuild = "1" -o $mysqlbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" ] && [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ] || [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
@@ -177,10 +215,10 @@ then
 		cd $OLDPWD
 		echo "DONE" | tee -a $zliblog
 	else
-		echo -n "Wget and untar zlib-${zlibver}..." | tee -a $zliblog
 		cd $archdir
-			wget -c http://zlib.net/zlib-${zlibver}.tar.gz >> $zliblog 2>&1
+			dl http://zlib.net/zlib-${zlibver}.tar.gz $zliblog
 		cd $OLDPWD
+		echo -n "Unpack zlib-${zlibver}..." | tee -a $zliblog
 		tar -xzvf ${archdir}zlib-${zlibver}.tar.gz >> $zliblog 2>&1
 		echo "DONE" | tee -a $zliblog
 	fi
@@ -215,10 +253,10 @@ then
 		cd $OLDPWD
 		echo "DONE" | tee -a $openssllog
 	else
-		echo -n "Wget and untar openssl-${opsslver}..." | tee -a $openssllog
 		cd $archdir
-			wget -c http://www.openssl.org/source/openssl-${opsslver}.tar.gz >> $openssllog 2>&1
+			dl http://www.openssl.org/source/openssl-${opsslver}.tar.gz $openssllog
 		cd $OLDPWD
+		echo -n "Unpack openssl-${opsslver}..." | tee -a $openssllog
 		tar -xzvf ${archdir}openssl-${opsslver}.tar.gz >> $openssllog 2>&1
 		echo "DONE" | tee -a $openssllog
 	fi
@@ -267,10 +305,10 @@ then
 		cd $OLDPWD
 		echo "DONE" | tee -a $nginxlog
 	else
-		echo -n "Wget and untar nginx-${nginxver}..." | tee -a $nginxlog
 		cd $archdir
-			wget -c http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz >> $nginxlog 2>&1
+			dl http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz $nginxlog
 		cd $OLDPWD
+		echo -n "Unpack nginx-${nginxver}..." | tee -a $nginxlog
 		tar -xzvf ${archdir}nginx-${nginxver}.tar.gz >> $nginxlog 2>&1
 		echo "DONE" | tee -a $nginxlog
 	fi
@@ -282,10 +320,10 @@ then
 		cd $OLDPWD
 		echo "DONE" | tee -a $pcrelog
 	else
-		echo -n "Wget and untar pcre-${pcrever}..." | tee -a $pcrelog
 		cd $archdir
-			wget -c http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz >> $pcrelog 2>&1
+			dl http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz $pcrelog
 		cd $OLDPWD
+		echo -n "Unpack pcre-${pcrever}..." | tee -a $pcrelog
 		tar -xzvf ${archdir}pcre-${pcrever}.tar.gz >> $pcrelog 2>&1
 		echo "DONE" | tee -a $pcrelog
 	fi
@@ -381,10 +419,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $ncurseslog
 		else
-			echo -n "Wget and untar ncurses-${ncursesver}..." | tee -a $ncurseslog
 			cd ${archdir}
-				wget -c http://ftp.gnu.org/pub/gnu/ncurses/ncurses-${ncursesver}.tar.gz >> $ncurseslog 2>&1
+				dl http://ftp.gnu.org/pub/gnu/ncurses/ncurses-${ncursesver}.tar.gz $ncurseslog
 			cd $OLDPWD
+			echo -n "Unpack ncurses-${ncursesver}..." | tee -a $ncurseslog
 			tar -xzvf ${archdir}ncurses-${ncursesver}.tar.gz >> $ncurseslog 2>&1
 			echo "DONE" | tee -a $ncurseslog
 		fi
@@ -411,10 +449,10 @@ then
 		cd $OLDPWD
 		echo "DONE" | tee -a $mysqllog
 	else
-		echo -n "Wget and untar mysql-${mysqlfullver}..." | tee -a $mysqllog
 		cd ${archdir}
-			wget -c http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/ >> $mysqllog 2>&1
+			dl http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/ $mysqllog
 		cd $OLDPWD
+		echo -n "Unpack mysql-${mysqlfullver}..." | tee -a $mysqllog
 		tar -xzvf ${archdir}mysql-${mysqlfullver}.tar.gz >> $mysqllog 2>&1
 		echo "DONE" | tee -a $mysqllog
 	fi
@@ -530,10 +568,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $libpngver
 		else
-			echo -n "Wget and untar libpng-${pngver}..." | tee -a $libpngver
 			cd ${archdir}
-				wget -c http://sourceforge.net/projects/libpng/files/01-libpng-master/${pngver}/libpng-${pngver}.tar.gz/download >> $libpngver 2>&1
+				dl http://sourceforge.net/projects/libpng/files/01-libpng-master/${pngver}/libpng-${pngver}.tar.gz/download $libpngver
 			cd $OLDPWD
+			echo -n "Unpack libpng-${pngver}..." | tee -a $libpngver
 			tar -xzf ${archdir}libpng-${pngver}.tar.gz >> $libpngver 2>&1
 			echo "DONE" | tee -a $libpngver
 		fi
@@ -564,10 +602,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $libjpeglog
 		else
-			echo -n "Wget and untar libjpeg-${jpegver}..." | tee -a $libjpeglog
 			cd ${archdir}
-				wget -c http://www.ijg.org/files/jpegsrc.v${jpegver}.tar.gz >> $libjpeglog 2>&1
+				dl http://www.ijg.org/files/jpegsrc.v${jpegver}.tar.gz $libjpeglog
 			cd $OLDPWD
+			echo -n "Unpack libjpeg-${jpegver}..." | tee -a $libjpeglog
 			tar -xzf ${archdir}jpegsrc.v${jpegver}.tar.gz >> $libjpeglog 2>&1
 			echo "DONE" | tee -a $libjpeglog
 		fi
@@ -596,10 +634,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $libxml2log
 		else
-			echo -n "Wget and untar libxml2-${libxmlver}..." | tee -a $libxml2log
 			cd ${archdir}
-				wget -c http://fr.rpmfind.net/pub/libxml/libxml2-${libxmlver}.tar.gz >> $libxml2log 2>&1
+				dl http://fr.rpmfind.net/pub/libxml/libxml2-${libxmlver}.tar.gz $libxml2log
 			cd $OLDPWD
+			echo -n "Unpack libxml2-${libxmlver}..." | tee -a $libxml2log
 			tar -xzf ${archdir}libxml2-${libxmlver}.tar.gz >> $libxml2log 2>&1
 			echo "DONE"
 		fi
@@ -630,10 +668,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $mhashlog
 		else
-			echo -n "Wget and untar mhash-${mhashver}..." | tee -a $mhashlog
 			cd ${archdir}
-				wget -c http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download >> $mhashlog 2>&1
+				dl http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download $mhashlog
 			cd $OLDPWD
+			echo -n "Unpack mhash-${mhashver}..." | tee -a $mhashlog
 			tar -xzf ${archdir}mhash-${mhashver}.tar.gz >> $mhashlog 2>&1
 			echo "DONE" | tee -a $mhashlog
 		fi
@@ -662,10 +700,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $libmcryplog
 		else
-			echo -n "Wget and untar libmcrypt-${mcryptver}..." | tee -a $libmcryplog
 			cd ${archdir}
-				wget -c http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download >> $libmcryplog 2>&1
+				dl http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download $libmcryplog
 			cd $OLDPWD
+			echo -n "Unpack libmcrypt-${mcryptver}..." | tee -a $libmcryplog
 			tar -xzf ${archdir}libmcrypt-${mcryptver}.tar.gz >> $libmcryplog 2>&1
 			echo "DONE" | tee -a $libmcryplog
 		fi
@@ -694,10 +732,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $libeventlog
 		else
-			echo -n "Wget and untar libevent-${eventver}..." | tee -a $libeventlog
 			cd ${archdir}
-				wget -c http://www.monkey.org/~provos/libevent-${eventver}.tar.gz >> $libeventlog 2>&1
+				dl http://www.monkey.org/~provos/libevent-${eventver}.tar.gz $libeventlog
 			cd $OLDPWD
+			echo -n "Unpack libevent-${eventver}..." | tee -a $libeventlog
 			tar -xzf ${archdir}libevent-${eventver}.tar.gz >> $libeventlog 2>&1
 			echo "DONE" | tee -a $libeventlog
 		fi
@@ -726,10 +764,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $libiconvlog
 		else
-			echo -n "Wget and untar libiconv-${iconvver}..." | tee -a $libiconvlog
 			cd ${archdir}
-				wget -c http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${iconvver}.tar.gz >> $libiconvlog 2>&1
+				dl http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${iconvver}.tar.gz $libiconvlog
 			cd $OLDPWD
+			echo -n "Unpack libiconv-${iconvver}..." | tee -a $libiconvlog
 			tar -xzf ${archdir}libiconv-${iconvver}.tar.gz >> $libiconvlog 2>&1
 			echo "DONE" | tee -a $libiconvlog
 		fi
@@ -758,10 +796,10 @@ then
 			cd $OLDPWD
 			echo "DONE" | tee -a $curllog
 		else
-			echo -n "Wget and untar curl-${curlver}..." | tee -a $curllog
 			cd ${archdir}
-				wget -c http://curl.haxx.se/download/curl-${curlver}.tar.gz >> $curllog 2>&1
+				dl http://curl.haxx.se/download/curl-${curlver}.tar.gz $curllog
 			cd $OLDPWD
+			echo -n "Unpack curl-${curlver}..." | tee -a $curllog
 			tar -xzf ${archdir}curl-${curlver}.tar.gz >> $curllog 2>&1
 			echo "DONE" | tee -a $curllog
 		fi
@@ -827,17 +865,17 @@ then
 	else
 		if [ ! -e eaccelerator-${eaccver} ]
 		then
-			echo -n "Wget and untar eaccelerator-${eaccver}..." | tee -a $phplog
 			cd ${archdir}
-				wget -c http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2 >> $phplog 2>&1
+				dl http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2 $phplog
 			cd $OLDPWD
+			echo -n "Unpack eaccelerator-${eaccver}..." | tee -a $phplog
 			tar -xjf ${archdir}eaccelerator-${eaccver}.tar.bz2 >> $phplog 2>&1
 			echo "DONE" | tee -a $phplog
 		fi
-		echo -n "Wget and untar php-${phpver}..." | tee -a $phplog
 		cd ${archdir}
-			wget -c http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror >> $phplog 2>&1
+			dl http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror $phplog
 		cd $OLDPWD
+		echo -n "Unpack php-${phpver}..." | tee -a $phplog
 		tar -xzf ${archdir}php-${phpver}.tar.gz >> $phplog 2>&1
 		echo "DONE" | tee -a $phplog
 		echo -n "Buildconf php-${phpver}..." | tee -a $phplog
