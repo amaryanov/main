@@ -1131,7 +1131,8 @@ then
 	fi
 	echo -n "Make subversion-${subversionver}..." | tee -a $subversionlog
 	cd subversion-${subversionver}
-		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib -Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib" \
+		LDFLAGS="-L${builddir}other/zlib/${zlibver}/lib -L${builddir}other/openssl/${opsslver}/lib \
+			-Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib -Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib" \
 			./configure --prefix=${builddir}main/subversion/${subversionver} \
 			--with-apr=${builddir}other/apr/${aprver} \
 			--with-apr-util=${builddir}other/apr-util/${aprutilver} \
