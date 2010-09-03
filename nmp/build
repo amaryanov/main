@@ -10,15 +10,18 @@
 #####SCRIPT CONFIG#####
 #build
 nginxbuild=1
-mysqlbuild=0
-phpbuild=0
-svnbuild=0
+mysqlbuild=1
+phpbuild=1
+subversionbuild=1
+
+#download
+download=1
 
 #symlink
 nginxsym=0
 mysqlsym=0
 phpsym=0
-svnsym=0
+subversionsym=1
 
 #configure
 nginxconf=0
@@ -29,6 +32,7 @@ phpconf=0
 nginxreb=0
 mysqlreb=0
 phpreb=0
+subversionreb=1
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -40,6 +44,9 @@ pngreb=0
 ncursesreb=0
 eventreb=0
 iconvreb=0
+aprreb="0"
+aprutilreb="0"
+neonreb="0"
 
 #users
 export wwwuser="www"
@@ -52,6 +59,7 @@ nginxver="0.7.67"
 mysqlver="5.1"
 mysqlsubver="49"
 phpver="5.3.3"
+subversionver="1.6.12"
 mysqlfullver=$mysqlver.$mysqlsubver
 eaccver="0.9.6.1"
 zlibver="1.2.5"
@@ -66,86 +74,10 @@ pngver="1.4.3"
 ncursesver="5.7"
 eventver="1.4.14b-stable"
 iconvver="1.13.1"
+aprver="1.4.2"
+aprutilver="1.3.9"
+neonver="0.29.3"
 #####END SCRIPT CONFIG#####
-
-dl()
-{
-	if [ "x$1" = 'x' ]
-	then
-		echo 'Please provide URL to download.'
-		return 1
-	fi
-	if [ "x$2" = 'x' ]
-	then
-		echo 'Please provide log file'
-		return 1
-	fi
-	#look for downloader
-	if [ "x${dler}" = 'x' ]
-	then
-		if [ "x`which curl`" != 'x' ]
-		then
-			dler='curl'
-		elif [ "x`which wget`" != 'x' ]
-		then
-			dler='wget'
-		else
-			echo 'I need downloader(wget or curl)'
-			exit 1
-		fi
-	fi
-	case "$dler" in
-		'curl')
-			echo -n "Download $1..." | tee -a $2
-			res="`curl -OsLC - -w "%{size_download} %{http_code}" $1 2>>$2`"
-			curlret=$?
-			dlsize="`echo $res | cut -d ' ' -f 1`"
-			httpcode="`echo $res | cut -d ' ' -f 2`"
-			if [ $curlret = "18" -o $curlret = "0" ]
-			then
-				echo -n "DONE"  | tee -a $2
-			else
-				echo -n "There was an error while downloading $1. return code $curlret. " | tee -a $2
-			fi
-			echo " download size = ${dlsize}, HTTP code = ${httpcode}." | tee -a $2
-			;;
-		'wget')
-			echo -n "Download $1..." | tee -a $2
-			wget -c $1 >> $2 2>&1
-			if [ "$?" != "0" ]
-			then
-				echo "There was an error while downloading $1" | tee -a $2
-			else
-				echo "DONE" | tee -a $2
-			fi
-			;;
-	esac
-}
-
-if [ $nginxbuild = "1" -a -e ${builddir}main/nginx/${nginxver} ]
-then
-	nginxbuild="0"
-fi
-if [ $mysqlbuild = "1" -a -e ${builddir}mysql-${nginxver} ]
-then
-	mysqlbuild="0"
-fi
-if [ $phpbuild = "1" -a -e ${builddir}php-${nginxver} ]
-then
-	phpbuild="0"
-fi
-
-if [ $nginxbuild = "0" -a \
-	$mysqlbuild = "0" -a \
-	$phpbuild = "0" -a \
-	$nginxreb = "0" -a \
-	$mysqlreb = "0" -a \
-	$phpreb = "0" \
-]
-then
-	echo 'Nothing to do.'
-	exit 0
-fi
 
 scriptdir=$(cd `dirname $0` && pwd && cd $OLDPWD)/
 
@@ -161,6 +93,112 @@ nginxdatadir=${datadir}nginx/
 export mysqldatadir=${datadir}mysql/
 export phpdatadir=${datadir}php/
 
+dl()
+{
+	if [ $download = "1" ]
+	then
+		if [ "x$1" = 'x' ]
+		then
+			echo 'Please provide URL to download.'
+			return 1
+		fi
+		if [ "x$3" = 'x' ]
+		then
+			echo 'Please provide log file'
+			return 1
+		fi
+		#look for downloader
+		if [ "x${dler}" = 'x' ]
+		then
+			if [ "x`which curl`" != 'x' ]
+			then
+				dler='curl'
+			elif [ "x`which wget`" != 'x' ]
+			then
+				dler='wget'
+			else
+				echo 'I need downloader(wget or curl)'
+				exit 1
+			fi
+		fi
+		case "$dler" in
+			'curl')
+				echo -n "Download $1..." | tee -a $3
+				res="`curl -o $2 -sLC - -w "%{size_download} %{http_code}" $1 2>>$3`"
+				curlret=$?
+				dlsize="`echo $res | cut -d ' ' -f 1`"
+				httpcode="`echo $res | cut -d ' ' -f 2`"
+				if [ $curlret = "18" -o $curlret = "0" ]
+				then
+					echo -n "DONE"  | tee -a $3
+				else
+					echo -n "There was an error while downloading $1. return code $curlret. " | tee -a $3
+				fi
+				echo " download size = ${dlsize}, HTTP code = ${httpcode}." | tee -a $3
+				;;
+			'wget')
+				echo -n "Download $1..." | tee -a $3
+				wget -co $2 $1 >> $3 2>&1
+				if [ "$?" != "0" ]
+				then
+					echo "There was an error while downloading $1" | tee -a $3
+				else
+					echo "DONE" | tee -a $3
+				fi
+				;;
+		esac
+	fi
+}
+
+if [ $nginxbuild = "1" -a -e ${builddir}main/nginx/${nginxver} ]
+then
+	nginxbuild="0"
+fi
+if [ $nginxreb = "1" -a ! -e ${builddir}main/nginx/${nginxver} ]
+then
+	nginxreb=0
+fi
+if [ $mysqlbuild = "1" -a -e ${builddir}main/mysql/${mysqlfullver} ]
+then
+	mysqlbuild="0"
+fi
+if [ $mysqlreb = "1" -a ! -e ${builddir}main/mysql/${mysqlfullver} ]
+then
+	mysqlreb=0
+fi
+if [ $phpbuild = "1" -a -e ${builddir}main/php/${phpxver} ]
+then
+	phpbuild="0"
+fi
+if [ $phpreb = "1" -a ! -e ${builddir}main/php/${phpver} ]
+then
+	phpreb=0
+fi
+if [ $subversionbuild = "1" -a -e ${builddir}main/subversion/${subversionxver} ]
+then
+	subversionbuild="0"
+fi
+if [ $subversionreb = "1" -a ! -e ${builddir}main/subversion/${subversionver} ]
+then
+	subversionreb=0
+fi
+
+if [ $nginxbuild = "0" -a \
+	$mysqlbuild = "0" -a \
+	$phpbuild = "0" -a \
+	$nginxreb = "0" -a \
+	$mysqlreb = "0" -a \
+	$phpreb = "0" -a \
+	$nginxconf = "0" -a \
+	$mysqlconf = "0" -a \
+	$phpconf = "0" -a \
+	$subversionbuild = "0" -a \
+	$subversionreb = "0" \
+]
+then
+	echo 'Nothing to do.'
+	exit 0
+fi
 #logging
 mkdir -p ${buildlog}zlib/${zlibver}
 zliblog=`mktemp -u ${buildlog}zlib/${zlibver}/XXX`
@@ -192,6 +230,14 @@ mkdir -p ${buildlog}libiconv/${iconvver}
 libiconvlog=`mktemp -u ${buildlog}libiconv/${iconvver}/XXX`
 mkdir -p ${buildlog}curl/${curlver}
 curllog=`mktemp -u ${buildlog}curl/${curlver}/XXX`
+mkdir -p ${buildlog}subversion/${subversionver}
+subversionlog=`mktemp -u ${buildlog}subversion/${subversionver}/XXX`
+mkdir -p ${buildlog}apr/${aprver}
+aprlog=`mktemp -u ${buildlog}apr/${aprver}/XXX`
+mkdir -p ${buildlog}apr-util/${aprutilver}
+aprutillog=`mktemp -u ${buildlog}apr-util/${aprutilver}/XXX`
+mkdir -p ${buildlog}neon/${neonver}
+neonlog=`mktemp -u ${buildlog}neon/${neonver}/XXX`
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -204,7 +250,9 @@ chmod 777 ${datadir}run
 
 cd $srcdir
 #zlib
-if [ $phpbuild = "1" -o $mysqlbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" ] && [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ] || [ $nginxbuild = "1" -o $nginxreb = "1" ]
+if  [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ] \
+	&& [ $phpbuild = "1" -o $mysqlbuild = "1" -o $subversionbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" -o $subversionreb = "1" ] \
+	|| [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
 	echo "START BUILD zlib-"${zlibver} | tee -a $zliblog
 	if [ -e zlib-${zlibver} ]
@@ -216,14 +264,15 @@ then
 		echo "DONE" | tee -a $zliblog
 	else
 		cd $archdir
-			dl http://zlib.net/zlib-${zlibver}.tar.gz $zliblog
+			dl http://zlib.net/zlib-${zlibver}.tar.gz zlib-${zlibver}.tar.gz $zliblog
 		cd $OLDPWD
 		echo -n "Unpack zlib-${zlibver}..." | tee -a $zliblog
 		tar -xzvf ${archdir}zlib-${zlibver}.tar.gz >> $zliblog 2>&1
 		echo "DONE" | tee -a $zliblog
 	fi
 
-	if [ $phpbuild = "1" -o $mysqlbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" ] && [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ]
+	if [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ] \
+		&& [ $phpbuild = "1" -o $mysqlbuild = "1" -o $subversionbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" -o $subversionreb = "1" ]
 	then
 		echo -n "Make zlib-${zlibver}..." | tee -a $zliblog
 		cd zlib-${zlibver}
@@ -242,7 +291,9 @@ then
 	echo "DONE BUILD zlib-"${zlibver} | tee -a $zliblog
 fi
 #openssl
-if [ $phpbuild = "1" -o $phpreb = "1" ] && [ ! -e ${builddir}other/openssl/${opsslver} -o $opsslreb = "1" ] || [ $nginxbuild = "1" -o $nginxreb = "1" ]
+if [ $phpbuild = "1" -o $phpreb = "1" -o $subversionbuild = "1" -o $subversionreb = "1" ] \
+	&& [ ! -e ${builddir}other/openssl/${opsslver} -o $opsslreb = "1" ] \
+	|| [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
 	echo "START BUILD openssl-${opsslver}" | tee -a $openssllog
 	if [ -e openssl-${opsslver} ]
@@ -254,14 +305,15 @@ then
 		echo "DONE" | tee -a $openssllog
 	else
 		cd $archdir
-			dl http://www.openssl.org/source/openssl-${opsslver}.tar.gz $openssllog
+			dl http://www.openssl.org/source/openssl-${opsslver}.tar.gz ${opsslver}.tar.gz $openssllog
 		cd $OLDPWD
 		echo -n "Unpack openssl-${opsslver}..." | tee -a $openssllog
 		tar -xzvf ${archdir}openssl-${opsslver}.tar.gz >> $openssllog 2>&1
 		echo "DONE" | tee -a $openssllog
 	fi
 
-	if [ $phpbuild = "1" -o $phpreb = "1" ] && [ ! -e ${builddir}other/openssl/${opsslver} -o $opsslreb = "1" ]
+	if [ $phpbuild = "1" -o $phpreb = "1" -o $subversionbuild = "1" -o $subversionreb = "1" ] \
+		&& [ ! -e ${builddir}other/openssl/${opsslver} -o $opsslreb = "1" ]
 	then
 		echo -n "Make openssl-${opsslver}..." | tee -a $openssllog
 		cd openssl-${opsslver}
@@ -289,7 +341,7 @@ then
 fi
 
 #nginx
-if [ $nginxbuild = "1" -a ! -e ${builddir}main/nginx/${nginxver} ] || [ $nginxreb = "1" -a -e ${builddir}main/nginx/${nginxver} ]
+if [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
 	echo "START BUILD nginx-${nginxver}" | tee -a $nginxlog
 	if [ "`id -un ${wwwuser} 2>/dev/null`" != "${wwwuser}" ]
@@ -306,7 +358,7 @@ then
 		echo "DONE" | tee -a $nginxlog
 	else
 		cd $archdir
-			dl http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz $nginxlog
+			dl http://sysoev.ru/nginx/nginx-${nginxver}.tar.gz nginx-${nginxver}.tar.gz $nginxlog
 		cd $OLDPWD
 		echo -n "Unpack nginx-${nginxver}..." | tee -a $nginxlog
 		tar -xzvf ${archdir}nginx-${nginxver}.tar.gz >> $nginxlog 2>&1
@@ -321,7 +373,7 @@ then
 		echo "DONE" | tee -a $pcrelog
 	else
 		cd $archdir
-			dl http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz $pcrelog
+			dl http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz pcre-${pcrever}.tar.gz $pcrelog
 		cd $OLDPWD
 		echo -n "Unpack pcre-${pcrever}..." | tee -a $pcrelog
 		tar -xzvf ${archdir}pcre-${pcrever}.tar.gz >> $pcrelog 2>&1
@@ -400,7 +452,7 @@ then
 fi
 
 #mysql
-if [ $mysqlbuild = "1" -a ! -e ${builddir}main/mysql/${mysqlfullver} ] || [ $mysqlreb = "1" -a -e ${builddir}main/mysql/${mysqlfullver} ]
+if [ $mysqlbuild = "1" -o $mysqlreb = "1" ]
 then
 	echo "START BUILD mysql-${mysqlfullver}" | tee -a $mysqllog
 	if [ "`id -un ${mysqluser} 2>/dev/null`" != "${mysqluser}" -o "`id -gn ${mysqluser} 2>/dev/null`" != "${mysqluser}" ]
@@ -420,7 +472,7 @@ then
 			echo "DONE" | tee -a $ncurseslog
 		else
 			cd ${archdir}
-				dl http://ftp.gnu.org/pub/gnu/ncurses/ncurses-${ncursesver}.tar.gz $ncurseslog
+				dl http://ftp.gnu.org/pub/gnu/ncurses/ncurses-${ncursesver}.tar.gz ncurses-${ncursesver}.tar.gz $ncurseslog
 			cd $OLDPWD
 			echo -n "Unpack ncurses-${ncursesver}..." | tee -a $ncurseslog
 			tar -xzvf ${archdir}ncurses-${ncursesver}.tar.gz >> $ncurseslog 2>&1
@@ -450,7 +502,7 @@ then
 		echo "DONE" | tee -a $mysqllog
 	else
 		cd ${archdir}
-			dl http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/ $mysqllog
+			dl http://dev.mysql.com/get/Downloads/MySQL-${mysqlver}/mysql-${mysqlfullver}.tar.gz/from/http://mysql.infocom.ua/ mysql-${mysqlfullver}.tar.gz $mysqllog
 		cd $OLDPWD
 		echo -n "Unpack mysql-${mysqlfullver}..." | tee -a $mysqllog
 		tar -xzvf ${archdir}mysql-${mysqlfullver}.tar.gz >> $mysqllog 2>&1
@@ -537,7 +589,7 @@ then
 fi
 
 #php
-if [ $phpbuild = "1" -a ! -e ${builddir}main/php/${phpver} ] || [ $phpreb = "1" -a -e ${builddir}main/php/${phpver} ]
+if [ $phpbuild = "1" -o $phpreb = "1" ]
 then
 	echo "START BUILD php-${phpver}" | tee -a $phplog
 	if [ "`id -un ${wwwuser} 2>/dev/null`" != "${wwwuser}" -o "`id -gn ${wwwuser} 2>/dev/null`" != "${wwwuser}" ]
@@ -569,7 +621,7 @@ then
 			echo "DONE" | tee -a $libpngver
 		else
 			cd ${archdir}
-				dl http://sourceforge.net/projects/libpng/files/01-libpng-master/${pngver}/libpng-${pngver}.tar.gz/download $libpngver
+				dl http://sourceforge.net/projects/libpng/files/01-libpng-master/${pngver}/libpng-${pngver}.tar.gz/download libpng-${pngver}.tar.gz $libpngver
 			cd $OLDPWD
 			echo -n "Unpack libpng-${pngver}..." | tee -a $libpngver
 			tar -xzf ${archdir}libpng-${pngver}.tar.gz >> $libpngver 2>&1
@@ -603,7 +655,7 @@ then
 			echo "DONE" | tee -a $libjpeglog
 		else
 			cd ${archdir}
-				dl http://www.ijg.org/files/jpegsrc.v${jpegver}.tar.gz $libjpeglog
+				dl http://www.ijg.org/files/jpegsrc.v${jpegver}.tar.gz jpegsrc.v${jpegver}.tar.gz $libjpeglog
 			cd $OLDPWD
 			echo -n "Unpack libjpeg-${jpegver}..." | tee -a $libjpeglog
 			tar -xzf ${archdir}jpegsrc.v${jpegver}.tar.gz >> $libjpeglog 2>&1
@@ -635,7 +687,7 @@ then
 			echo "DONE" | tee -a $libxml2log
 		else
 			cd ${archdir}
-				dl http://fr.rpmfind.net/pub/libxml/libxml2-${libxmlver}.tar.gz $libxml2log
+				dl http://fr.rpmfind.net/pub/libxml/libxml2-${libxmlver}.tar.gz libxml2-${libxmlver}.tar.gz $libxml2log
 			cd $OLDPWD
 			echo -n "Unpack libxml2-${libxmlver}..." | tee -a $libxml2log
 			tar -xzf ${archdir}libxml2-${libxmlver}.tar.gz >> $libxml2log 2>&1
@@ -669,7 +721,7 @@ then
 			echo "DONE" | tee -a $mhashlog
 		else
 			cd ${archdir}
-				dl http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download $mhashlog
+				dl http://sourceforge.net/projects/mhash/files/mhash/${mhashver}/mhash-${mhashver}.tar.gz/download mhash-${mhashver}.tar.gz $mhashlog
 			cd $OLDPWD
 			echo -n "Unpack mhash-${mhashver}..." | tee -a $mhashlog
 			tar -xzf ${archdir}mhash-${mhashver}.tar.gz >> $mhashlog 2>&1
@@ -701,7 +753,7 @@ then
 			echo "DONE" | tee -a $libmcryplog
 		else
 			cd ${archdir}
-				dl http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download $libmcryplog
+				dl http://sourceforge.net/projects/mcrypt/files/Libmcrypt/${mcryptver}/libmcrypt-${mcryptver}.tar.gz/download libmcrypt-${mcryptver}.tar.gz $libmcryplog
 			cd $OLDPWD
 			echo -n "Unpack libmcrypt-${mcryptver}..." | tee -a $libmcryplog
 			tar -xzf ${archdir}libmcrypt-${mcryptver}.tar.gz >> $libmcryplog 2>&1
@@ -733,7 +785,7 @@ then
 			echo "DONE" | tee -a $libeventlog
 		else
 			cd ${archdir}
-				dl http://www.monkey.org/~provos/libevent-${eventver}.tar.gz $libeventlog
+				dl http://www.monkey.org/~provos/libevent-${eventver}.tar.gz libevent-${eventver}.tar.gz $libeventlog
 			cd $OLDPWD
 			echo -n "Unpack libevent-${eventver}..." | tee -a $libeventlog
 			tar -xzf ${archdir}libevent-${eventver}.tar.gz >> $libeventlog 2>&1
@@ -765,7 +817,7 @@ then
 			echo "DONE" | tee -a $libiconvlog
 		else
 			cd ${archdir}
-				dl http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${iconvver}.tar.gz $libiconvlog
+				dl http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${iconvver}.tar.gz libiconv-${iconvver}.tar.gz $libiconvlog
 			cd $OLDPWD
 			echo -n "Unpack libiconv-${iconvver}..." | tee -a $libiconvlog
 			tar -xzf ${archdir}libiconv-${iconvver}.tar.gz >> $libiconvlog 2>&1
@@ -797,7 +849,7 @@ then
 			echo "DONE" | tee -a $curllog
 		else
 			cd ${archdir}
-				dl http://curl.haxx.se/download/curl-${curlver}.tar.gz $curllog
+				dl http://curl.haxx.se/download/curl-${curlver}.tar.gz curl-${curlver}.tar.gz $curllog
 			cd $OLDPWD
 			echo -n "Unpack curl-${curlver}..." | tee -a $curllog
 			tar -xzf ${archdir}curl-${curlver}.tar.gz >> $curllog 2>&1
@@ -866,14 +918,14 @@ then
 		if [ ! -e eaccelerator-${eaccver} ]
 		then
 			cd ${archdir}
-				dl http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2 $phplog
+				dl http://bart.eaccelerator.net/source/${eaccver}/eaccelerator-${eaccver}.tar.bz2 eaccelerator-${eaccver}.tar.bz2 $phplog
 			cd $OLDPWD
 			echo -n "Unpack eaccelerator-${eaccver}..." | tee -a $phplog
 			tar -xjf ${archdir}eaccelerator-${eaccver}.tar.bz2 >> $phplog 2>&1
 			echo "DONE" | tee -a $phplog
 		fi
 		cd ${archdir}
-			dl http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror $phplog
+			dl http://php.net/get/php-${phpver}.tar.gz/from/de.php.net/mirror php-${phpver}.tar.gz $phplog
 		cd $OLDPWD
 		echo -n "Unpack php-${phpver}..." | tee -a $phplog
 		tar -xzf ${archdir}php-${phpver}.tar.gz >> $phplog 2>&1
@@ -959,6 +1011,148 @@ then
 	${scriptdir}/conf/php/init.d.sh > ${phpdatadir}init.d
 	chmod 755 ${phpdatadir}init.d
 	echo "DONE" | tee -a $phplog
+fi
+
+if [ $subversionbuild = "1" -o $subversionreb = "1" ]
+then
+	echo "START BUILD subversion-${subversionver}" | tee -a $subversionlog
+	if [ ! -e ${builddir}other/apr/${aprver} -o $aprreb = "1" ]
+	then
+		echo "START BUILD apr-${aprver}" | tee -a $aprlog
+		if [ -e apr-${aprver} ]
+		then
+			echo -n "Clean apr-${aprver}..." | tee -a $aprlog
+			cd apr-${aprver}
+				make distclean >> $aprlog 2>&1
+			cd $OLDPWD
+			echo "DONE" | tee -a $aprlog
+		else
+			cd ${archdir}
+				dl http://apache.infocom.ua/apr/apr-${aprver}.tar.gz apr-${aprver}.tar.gz $aprlog
+			cd $OLDPWD
+			echo -n "Unpack apr-${aprver}..." | tee -a $aprlog
+			tar -xzf ${archdir}apr-${aprver}.tar.gz >> $aprlog 2>&1
+			echo "DONE" | tee -a $aprlog
+		fi
+		echo -n "Make apr-${aprver}..." | tee -a $aprlog
+		cd apr-${aprver}
+			./configure --prefix=${builddir}other/apr/${aprver} >> $aprlog 2>&1 && \
+			make >> $aprlog 2>&1 && \
+			if [ -e ${builddir}other/apr/${aprver} ]
+			then
+				mkdir -p ${oldbuilddir}apr/${aprver}
+				mv ${builddir}other/apr/${aprver} `mktemp -ud ${oldbuilddir}apr/${aprver}/XXX` >> $aprlog 2>&1
+			fi && \
+			make install >> $aprlog 2>&1 || exit 1
+		cd $OLDPWD
+		echo "DONE" | tee -a $aprlog
+		echo "DONE BUILD apr-${aprver}" | tee -a $aprlog
+	fi
+	if [ ! -e ${builddir}other/apr-util/${aprutilver} -o $aprutilreb = "1" ]
+	then
+		echo "START BUILD apr-util-${aprutilver}" | tee -a $aprutillog
+		if [ -e apr-util-${aprutilver} ]
+		then
+			echo -n "Clean apr-util-${aprutilver}..." | tee -a $aprutillog
+			cd apr-util-${aprutilver}
+				make distclean >> $aprutillog 2>&1
+			cd $OLDPWD
+			echo "DONE" | tee -a $aprutillog
+		else
+			cd ${archdir}
+				dl http://apache.infocom.ua/apr/apr-util-${aprutilver}.tar.gz apr-util-${aprutilver}.tar.gz $aprutillog
+			cd $OLDPWD
+			echo -n "Unpack apr-util-${aprutilver}..." | tee -a $aprutillog
+			tar -xzf ${archdir}apr-util-${aprutilver}.tar.gz >> $aprutillog 2>&1
+			echo "DONE" | tee -a $aprutillog
+		fi
+		echo -n "Make apr-util-${aprutilver}..." | tee -a $aprutillog
+		cd apr-util-${aprutilver}
+			./configure --prefix=${builddir}other/apr-util/${aprutilver} --with-apr=${builddir}other/apr/${aprver} >> $aprutillog 2>&1 && \
+			make >> $aprutillog 2>&1 && \
+			if [ -e ${builddir}other/apr-util/${aprutilver} ]
+			then
+				mkdir -p ${oldbuilddir}apr-util/${aprutilver}
+				mv ${builddir}other/apr-util/${aprutilver} `mktemp -ud ${oldbuilddir}apr-util/${aprutilver}/XXX` >> $aprutillog 2>&1
+			fi && \
+			make install >> $aprutillog 2>&1 || exit 1
+		cd $OLDPWD
+		echo "DONE" | tee -a $aprutillog
+		echo "DONE BUILD apr-util-${aprutilver}" | tee -a $aprutillog
+	fi
+	if [ ! -e ${builddir}other/neon/${neonver} -o $neonreb = "1" ]
+	then
+		echo "START BUILD neon-${neonver}" | tee -a $neonlog
+		if [ -e neon-${neonver} ]
+		then
+			echo -n "Clean neon-${neonver}..." | tee -a $neonlog
+			cd neon-${neonver}
+				make distclean >> $neonlog 2>&1
+			cd $OLDPWD
+			echo "DONE" | tee -a $neonlog
+		else
+			cd ${archdir}
+				dl http://www.webdav.org/neon/neon-${neonver}.tar.gz neon-${neonver}.tar.gz $neonlog
+			cd $OLDPWD
+			echo -n "Unpack neon-${neonver}..." | tee -a $neonlog
+			tar -xzf ${archdir}neon-${neonver}.tar.gz >> $neonlog 2>&1
+			echo "DONE" | tee -a $neonlog
+		fi
+		echo -n "Make neon-${neonver}..." | tee -a $neonlog
+		cd neon-${neonver}
+			./configure --prefix=${builddir}other/neon/${neonver} \
+				--with-ssl=openssl \
+				--with-libs=${builddir}other/zlib/${zlibver}:${builddir}other/openssl/${opsslver} >> $neonlog 2>&1 && \
+			make >> $neonlog 2>&1 && \
+			if [ -e ${builddir}other/neon/${neonver} ]
+			then
+				mkdir -p ${oldbuilddir}neon/${neonver}
+				mv ${builddir}other/neon/${neonver} `mktemp -ud ${oldbuilddir}neon/${neonver}/XXX` >> $neonlog 2>&1
+			fi && \
+			make install >> $neonlog 2>&1 || exit 1
+		cd $OLDPWD
+		echo "DONE" | tee -a $neonlog
+		echo "DONE BUILD neon-${neonver}" | tee -a $neonlog
+	fi
+	if [ -e subversion-${subversionver} ]
+	then
+		echo -n "Clean subversion-${subversionver}..." | tee -a $subversionlog
+		cd subversion-${subversionver}
+			make distclean >> $subversionlog 2>&1
+		cd $OLDPWD
+		echo "DONE" | tee -a $subversionlog
+	else
+		cd ${archdir}
+			dl http://subversion.tigris.org/downloads/subversion-${subversionver}.tar.gz subversion-${subversionver}.tar.gz $subversionlog
+		cd $OLDPWD
+		echo -n "Unpack subversion-${subversionver}..." | tee -a $subversionlog
+		tar -xzf ${archdir}subversion-${subversionver}.tar.gz >> $subversionlog 2>&1
+		echo "DONE" | tee -a $subversionlog
+	fi
+	echo -n "Make subversion-${subversionver}..." | tee -a $subversionlog
+	cd subversion-${subversionver}
+		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib -Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib" \
+			./configure --prefix=${builddir}main/subversion/${subversionver} \
+			--with-apr=${builddir}other/apr/${aprver} \
+			--with-apr-util=${builddir}other/apr-util/${aprutilver} \
+			--with-neon=${builddir}other/neon/${neonver} >> $subversionlog 2>&1 && \
+		make >> $subversionlog 2>&1 && \
+		if [ -e ${builddir}subversion/${subversionver} ]
+		then
+			mkdir -p ${oldbuilddir}subversion/${subversionver}
+			mv ${builddir}subversion/${subversionver} `mktemp -ud ${oldbuilddir}subversion/${subversionver}/XXX` >> $subversionlog 2>&1
+		fi && \
+		make install >> $subversionlog 2>&1 || exit 1
+	cd $OLDPWD
+	if [ $subversionsym = "1" ]
+	then
+		cd ${builddir}
+			rm -f subversion
+			ln -s main/subversion/${subversionver} subversion
+		cd $OLDPWD
+	fi
+	echo "DONE" | tee -a $subversionlog
+	echo "DONE BUILD subversion-${subversionver}" | tee -a $subversionlog
 fi
 
 exit 0
