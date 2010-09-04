@@ -9,9 +9,9 @@
 
 #####SCRIPT CONFIG#####
 #build
-nginxbuild=1
-mysqlbuild=1
-phpbuild=1
+nginxbuild=0
+mysqlbuild=0
+phpbuild=0
 subversionbuild=1
 
 #download
@@ -32,7 +32,7 @@ phpconf=0
 nginxreb=0
 mysqlreb=0
 phpreb=0
-subversionreb=1
+subversionreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -47,6 +47,7 @@ iconvreb=0
 aprreb="0"
 aprutilreb="0"
 neonreb="0"
+sqlitereb="0"
 
 #users
 export wwwuser="www"
@@ -77,6 +78,7 @@ iconvver="1.13.1"
 aprver="1.4.2"
 aprutilver="1.3.9"
 neonver="0.29.3"
+sqlitever="3.7.2"
 #####END SCRIPT CONFIG#####
 
 scriptdir=$(cd `dirname $0` && pwd && cd $OLDPWD)/
@@ -238,6 +240,8 @@ mkdir -p ${buildlog}apr-util/${aprutilver}
 aprutillog=`mktemp -u ${buildlog}apr-util/${aprutilver}/XXX`
 mkdir -p ${buildlog}neon/${neonver}
 neonlog=`mktemp -u ${buildlog}neon/${neonver}/XXX`
+mkdir -p ${buildlog}sqlite/${sqlitever}
+sqlitelog=`mktemp -u ${buildlog}sqlite/${sqlitever}/XXX`
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -1100,7 +1104,8 @@ then
 		fi
 		echo -n "Make neon-${neonver}..." | tee -a $neonlog
 		cd neon-${neonver}
-			./configure --prefix=${builddir}other/neon/${neonver} \
+			PATH="${PATH}:${builddir}other/libxml2/${libxmlver}/bin" \
+				./configure --prefix=${builddir}other/neon/${neonver} \
 				--with-ssl=openssl \
 				--with-libs=${builddir}other/zlib/${zlibver}:${builddir}other/openssl/${opsslver} >> $neonlog 2>&1 && \
 			make >> $neonlog 2>&1 && \
@@ -1113,6 +1118,38 @@ then
 		cd $OLDPWD
 		echo "DONE" | tee -a $neonlog
 		echo "DONE BUILD neon-${neonver}" | tee -a $neonlog
+	fi
+	if [ ! -e ${builddir}other/sqlite/${sqlitever} -o $sqlitereb = "1" ]
+	then
+		echo "START BUILD sqlite-${sqlitever}" | tee -a $sqlitelog
+		if [ -e sqlite-${sqlitever} ]
+		then
+			echo -n "Clean sqlite-${sqlitever}..." | tee -a $sqlitelog
+			cd sqlite-${sqlitever}
+				make distclean >> $sqlitelog 2>&1
+			cd $OLDPWD
+			echo "DONE" | tee -a $sqlitelog
+		else
+			cd ${archdir}
+				dl http://www.sqlite.org/sqlite-amalgamation-${sqlitever}.tar.gz sqlite-${sqlitever}.tar.gz $sqlitelog
+			cd $OLDPWD
+			echo -n "Unpack sqlite-${sqlitever}..." | tee -a $sqlitelog
+			tar -xzf ${archdir}sqlite-${sqlitever}.tar.gz >> $sqlitelog 2>&1
+			echo "DONE" | tee -a $sqlitelog
+		fi
+		echo -n "Make sqlite-${sqlitever}..." | tee -a $sqlitelog
+		cd sqlite-${sqlitever}
+			./configure --prefix=${builddir}other/sqlite/${sqlitever} >> $sqlitelog 2>&1 && \
+			make >> $sqlitelog 2>&1 && \
+			if [ -e ${builddir}other/sqlite/${sqlitever} ]
+			then
+				mkdir -p ${oldbuilddir}sqlite/${sqlitever}
+				mv ${builddir}other/sqlite/${sqlitever} `mktemp -ud ${oldbuilddir}sqlite/${sqlitever}/XXX` >> $sqlitelog 2>&1
+			fi && \
+			make install >> $sqlitelog 2>&1 || exit 1
+		cd $OLDPWD
+		echo "DONE" | tee -a $sqlitelog
+		echo "DONE BUILD sqlite-${sqlitever}" | tee -a $sqlitelog
 	fi
 	if [ -e subversion-${subversionver} ]
 	then
@@ -1131,11 +1168,13 @@ then
 	fi
 	echo -n "Make subversion-${subversionver}..." | tee -a $subversionlog
 	cd subversion-${subversionver}
-		LDFLAGS="-L${builddir}other/zlib/${zlibver}/lib -L${builddir}other/openssl/${opsslver}/lib \
+		LDFLAGS="-L${builddir}other/zlib/${zlibver}/lib -L${builddir}other/openssl/${opsslver}/lib -L${builddir}other/apr-util/${aprutilver}/lib\
 			-Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib -Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib" \
 			./configure --prefix=${builddir}main/subversion/${subversionver} \
 			--with-apr=${builddir}other/apr/${aprver} \
 			--with-apr-util=${builddir}other/apr-util/${aprutilver} \
+			--with-sqlite=${builddir}other/sqlite/${sqlitever} \
+			--with-zlib=${builddir}other/zlib/${zlibver} \
 			--with-neon=${builddir}other/neon/${neonver} >> $subversionlog 2>&1 && \
 		make >> $subversionlog 2>&1 && \
 		if [ -e ${builddir}subversion/${subversionver} ]
