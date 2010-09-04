@@ -32,7 +32,7 @@ phpconf=0
 nginxreb=0
 mysqlreb=0
 phpreb=0
-subversionreb=0
+subversionreb=1
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -1168,13 +1168,20 @@ then
 	fi
 	echo -n "Make subversion-${subversionver}..." | tee -a $subversionlog
 	cd subversion-${subversionver}
-		LDFLAGS="-L${builddir}other/zlib/${zlibver}/lib -L${builddir}other/openssl/${opsslver}/lib -L${builddir}other/apr-util/${aprutilver}/lib\
-			-Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib -Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib" \
+		LDFLAGS="-L${builddir}other/zlib/${zlibver}/lib -L${builddir}other/openssl/${opsslver}/lib -L${builddir}other/apr-util/${aprutilver}/lib \
+			-L${builddir}other/apr/${aprver}/lib \
+			-L${builddir}other/sqlite/${sqlitever}/lib \
+			-L${builddir}other/neon/${neonver}/lib \
+			-Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib \
+			-Wl,-rpath -Wl,${builddir}other/sqlite/${sqlitever}/lib \
+			-Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib" \
 			./configure --prefix=${builddir}main/subversion/${subversionver} \
 			--with-apr=${builddir}other/apr/${aprver} \
 			--with-apr-util=${builddir}other/apr-util/${aprutilver} \
 			--with-sqlite=${builddir}other/sqlite/${sqlitever} \
 			--with-zlib=${builddir}other/zlib/${zlibver} \
+			--disable-nls \
+			--enable-all-static \
 			--with-neon=${builddir}other/neon/${neonver} >> $subversionlog 2>&1 && \
 		make >> $subversionlog 2>&1 && \
 		if [ -e ${builddir}subversion/${subversionver} ]
