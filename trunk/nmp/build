@@ -12,7 +12,7 @@
 nginxbuild=0
 mysqlbuild=0
 phpbuild=0
-subversionbuild=1
+subversionbuild=0
 
 #download
 download=1
@@ -21,7 +21,7 @@ download=1
 nginxsym=0
 mysqlsym=0
 phpsym=0
-subversionsym=1
+subversionsym=0
 
 #configure
 nginxconf=0
@@ -32,7 +32,7 @@ phpconf=0
 nginxreb=0
 mysqlreb=0
 phpreb=0
-subversionreb=1
+subversionreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -46,7 +46,7 @@ eventreb=0
 iconvreb=0
 aprreb="0"
 aprutilreb="0"
-neonreb="1"
+neonreb="0"
 sqlitereb="0"
 
 #users
