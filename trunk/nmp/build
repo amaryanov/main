@@ -46,7 +46,7 @@ eventreb=0
 iconvreb=0
 aprreb="0"
 aprutilreb="0"
-neonreb="0"
+neonreb="1"
 sqlitereb="0"
 
 #users
@@ -1107,7 +1107,8 @@ then
 			PATH="${PATH}:${builddir}other/libxml2/${libxmlver}/bin" \
 				./configure --prefix=${builddir}other/neon/${neonver} \
 				--with-ssl=openssl \
-				--with-libs=${builddir}other/zlib/${zlibver}:${builddir}other/openssl/${opsslver} >> $neonlog 2>&1 && \
+				--with-libs=${builddir}other/zlib/${zlibver}:${builddir}other/openssl/${opsslver} \
+				--without-gssapi >> $neonlog 2>&1 && \
 			make >> $neonlog 2>&1 && \
 			if [ -e ${builddir}other/neon/${neonver} ]
 			then
@@ -1181,6 +1182,7 @@ then
 			--with-sqlite=${builddir}other/sqlite/${sqlitever} \
 			--with-zlib=${builddir}other/zlib/${zlibver} \
 			--disable-nls \
+			--disable-debug \
 			--enable-all-static \
 			--with-neon=${builddir}other/neon/${neonver} >> $subversionlog 2>&1 && \
 		make >> $subversionlog 2>&1 && \
