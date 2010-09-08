@@ -968,6 +968,7 @@ then
 			--with-curl=${builddir}other/curl/${curlver} \
 			--with-gd \
 			--with-iconv \
+			--enable-ctype \
 			--with-iconv-dir=${builddir}other/libiconv/${iconvver} \
 			--with-jpeg-dir=${builddir}other/libjpeg/${jpegver} \
 			--with-libevent-dir=${builddir}other/libevent/${eventver} \
