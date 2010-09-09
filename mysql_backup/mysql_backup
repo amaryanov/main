@@ -1,6 +1,13 @@
 #!/bin/sh
-while getopts  "abc:" flag
+counter=1
+while [ "$counter" -le "$#" ]
 do
-  echo "$flag" $OPTIND $OPTARG
-  done
+	var=`eval echo '$'$counter`
+	varname=`echo $var | sed 's/\([^=]\+\)=\(.*\)/\1/'`
+	varval=`echo $var | sed 's/\([^=]\+\)=\(.*\)/\2/'`
+	eval $varname='$varval'
+	counter=`expr $counter + 1`
+done
+
+exit 0
    
