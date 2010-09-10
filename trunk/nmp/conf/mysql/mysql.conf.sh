@@ -37,6 +37,7 @@ slow_query_log_file = ${mysqldatadir}log/slow.log
 log-queries-not-using-indexes
 log-slave-updates
 innodb=ON
+innodb_file_per_table
 innodb_data_home_dir = ${mysqldatadir}data/innodb/
 innodb_data_file_path = ibdata1:10M:autoextend
 innodb_log_group_home_dir = ${mysqldatadir}log/innodb/
