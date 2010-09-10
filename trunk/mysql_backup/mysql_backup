@@ -5,9 +5,34 @@ do
 	var=`eval echo '$'$counter`
 	varname=`echo $var | sed 's/\([^=]\+\)=\(.*\)/\1/'`
 	varval=`echo $var | sed 's/\([^=]\+\)=\(.*\)/\2/'`
-	eval $varname='$varval'
+	eval $varname='$varval' 2>/dev/null
 	counter=`expr $counter + 1`
 done
 
+if [ "x$masterdir" = "x" ]
+then
+	echo 'Need pasth to master.'
+	exit 1
+fi
+
+if [ "x$slavedir" = "x" ]
+then
+	echo 'Need path to slave.'
+	exit 1
+fi
+
+cd ${slavedir}/masterlog
+slavefiles="`ls -1`"
+cd $OLDPWD
+
+cd ${masterdir}/log/bin
+masterfiles="`ls -1`"
+cd $OLDPWD
+
+allfiles="${slavefiles}\n${masterfiles}"
+echo "$allfiles"
+
+#echo "$(echo "`ls -1 && cd ${masterdir}/log/bin && ls -1 && cd $OLDPWD`" | sort | uniq -u)`echo && cd ${masterdir}/log/bin && ls -1 && cd $OLDPWD`" | sort | uniq -d
+
 exit 0
-   
+
