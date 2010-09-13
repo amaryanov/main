@@ -13,6 +13,7 @@ nginxbuild=0
 mysqlbuild=0
 phpbuild=0
 subversionbuild=0
+rsyncbuild=1
 
 #download
 download=1
@@ -22,6 +23,7 @@ nginxsym=0
 mysqlsym=0
 phpsym=0
 subversionsym=0
+rsyncsym=1
 
 #configure
 nginxconf=0
@@ -33,6 +35,7 @@ nginxreb=0
 mysqlreb=0
 phpreb=0
 subversionreb=0
+rsyncreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -59,9 +62,10 @@ export mysqluser="mysql"
 nginxver="0.7.67"
 mysqlver="5.1"
 mysqlsubver="49"
+mysqlfullver=$mysqlver.$mysqlsubver
 phpver="5.3.3"
 subversionver="1.6.12"
-mysqlfullver=$mysqlver.$mysqlsubver
+rsyncver="3.0.7"
 eaccver="0.9.6.1"
 zlibver="1.2.5"
 opsslver="0.9.8o"
@@ -176,13 +180,21 @@ if [ $phpreb = "1" -a ! -e ${builddir}main/php/${phpver} ]
 then
 	phpreb=0
 fi
-if [ $subversionbuild = "1" -a -e ${builddir}main/subversion/${subversionxver} ]
+if [ $subversionbuild = "1" -a -e ${builddir}main/subversion/${subversionver} ]
 then
 	subversionbuild="0"
 fi
 if [ $subversionreb = "1" -a ! -e ${builddir}main/subversion/${subversionver} ]
 then
 	subversionreb=0
+fi
+if [ $rsyncbuild = "1" -a -e ${builddir}main/rsync/${rsyncver} ]
+then
+	rsyncbuild="0"
+fi
+if [ $rsyncreb = "1" -a ! -e ${builddir}main/rsync/${rsyncver} ]
+then
+	rsyncreb=0
 fi
 
 if [ $nginxbuild = "0" -a \
@@ -195,7 +207,9 @@ if [ $nginxbuild = "0" -a \
 	$mysqlconf = "0" -a \
 	$phpconf = "0" -a \
 	$subversionbuild = "0" -a \
-	$subversionreb = "0" \
+	$subversionreb = "0" -a \
+	$rsyncbuild = "0" -a \
+	$rsyncreb = "0" \
 ]
 then
 	echo 'Nothing to do.'
@@ -242,6 +256,8 @@ mkdir -p ${buildlog}neon/${neonver}
 neonlog=`mktemp -u ${buildlog}neon/${neonver}/XXX`
 mkdir -p ${buildlog}sqlite/${sqlitever}
 sqlitelog=`mktemp -u ${buildlog}sqlite/${sqlitever}/XXX`
+mkdir -p ${buildlog}rsync/${rsyncver}
+rsynclog=`mktemp -u ${buildlog}rsync/${rsyncver}/XXX`
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -1203,6 +1219,47 @@ then
 	fi
 	echo "DONE" | tee -a $subversionlog
 	echo "DONE BUILD subversion-${subversionver}" | tee -a $subversionlog
+fi
+
+#rsync
+if [ $rsyncbuild = "1" -o $rsyncreb = "1" ]
+then
+	echo "START BUILD rsync-${rsyncver}" | tee -a $rsynclog
+	if [ -e rsync-${rsyncver} ]
+	then
+		echo -n "Clean rsync-${rsyncver}..." | tee -a $rsynclog
+		cd rsync-${rsyncver}
+			make distclean >> $rsynclog 2>&1
+		cd $OLDPWD
+		echo "DONE" | tee -a $rsynclog
+	else
+		cd $archdir
+			dl http://www.samba.org/ftp/rsync/src/rsync-${rsyncver}.tar.gz rsync-${rsyncver}.tar.gz $rsynclog
+		cd $OLDPWD
+		echo -n "Unpack rsync-${rsyncver}..." | tee -a $rsynclog
+		tar -xzvf ${archdir}rsync-${rsyncver}.tar.gz >> $rsynclog 2>&1
+		echo "DONE" | tee -a $rsynclog
+	fi
+	echo -n "Make rsync-${rsyncver}..." | tee -a $rsynclog
+	rmdata=0
+	cd rsync-${rsyncver}/
+		./configure --prefix=${builddir}main/rsync/${rsyncver} >> $rsynclog 2>&1 && \
+		make >> $rsynclog 2>&1 && \
+		if [ -e ${builddir}main/rsync/${rsyncver} ]
+		then
+			mkdir -p  ${oldbuilddir}rsync/${rsyncver}
+			mv ${builddir}main/rsync/${rsyncver} `mktemp -ud ${oldbuilddir}rsync/${rsyncver}/XXX` >> $rsynclog 2>&1
+		fi && \
+		make install >> $rsynclog 2>&1 || exit 1
+	if [ $rsyncsym = "1" ]
+	then
+		cd ${builddir}
+			rm -f rsync
+			ln -s main/rsync/${rsyncver} rsync
+		cd $OLDPWD
+	fi
+	echo "DONE" | tee -a $rsynclog
+	echo "DONE BUILD rsync-${rsyncver}" | tee -a $rsynclog
 fi
 
 exit 0
