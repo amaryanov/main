@@ -1,6 +1,10 @@
 #!/bin/sh
 
-#Used variables: slavedir, masterdir, host, port, user
+#Used variables: slavedir, masterdir, host, port, user, rsync, mysqlbinlog
+
+serverdir="/home/www/server/"
+
+rsyncopt="-vrlcpz --ignore-existing --compress-level=9"
 
 counter=1
 while [ "$counter" -le "$#" ]
@@ -24,43 +28,63 @@ then
 	exit 1
 fi
 
+if [ "x$mysqlbinlog" = "x" ]
+then
+	if [ -e ${serverdir}build/mysql/bin/mysqlbinlog ]
+	then
+		mysqlbinlog="${serverdir}build/mysql/bin/mysqlbinlog"
+	elif [ "x`which mysqlbinlog`" != 'x' ]
+	then
+		mysqlbinlog="mysqlbinlog"
+	else
+		echo "Need mysqlbinlog."
+		exit 1
+	fi
+fi
+
+if [ "x$rsync" = "x" ]
+then
+	if [ -e ${serverdir}build/rsync/bin/rsync ]
+	then
+		rsync="${serverdir}build/rsync/bin/rsync"
+	elif [ "x`which mysqlbinlog`" != 'x' ]
+	then
+		rsync="rsync"
+	else
+		echo "Need rsync."
+		exit 1
+	fi
+	rsync="$rsync $rsyncopt"
+fi
 
 if [ "x$host" != "x" ]
 then
-	ssh="ssh "
-	scp="scp "
+	ssh="ssh"
 	if [ "x$port" != "x" ]
 	then
-		ssh="${ssh}-p${port} "
-		scp="${scp}-P${port} "
+		ssh="$ssh -p$port"
 	fi
 	if [ "x$user" != "x" ]
 	then
-		ssh="${ssh}${user}@"
-		scp="${scp}${user}@"
+		ssh="$ssh -l$user"
 	fi
-	ssh="${ssh}${host}"
-	scp="${scp}${host}:"
+	$rsync -e "$ssh" $host:$masterdir/log/bin/ $slavedir/masterlog/
+else
+	$rsync $masterdir/log/bin/ $slavedir/masterlog/
 fi
 
-masterdiresc=`echo "$masterdir" | sed 's/\//\\\\\//g'`
-
-slavelogs=`ls -1 ${slavedir}/masterlog/`
-masterlogs=`$ssh ls -1 ${masterdir}/log/bin/`
-uniqlogs=`echo "${slavelogs}\n${masterlogs}" | sort | uniq -u`
-logfiles=`echo "${uniqlogs}\n${masterlogs}" | sort | uniq -d`
-
-if [ "x$logfiles" != "x" ]
+if [ "$?" = "0" ]
 then
-	tocopy=`echo "${logfiles}" | sed 's/^/'${masterdiresc}'\/log\/bin\//' | tr '\n' ' ' | sed 's/\(^\s*\)\|\(\s*$\)//g'`
-	if [ "x$scp" != "x" ]
-	then
-		${scp}"${tocopy}" ${slavedir}/masterlog/
-	else
-		cp ${tocopy} ${slavedir}/masterlog/
-	fi
+	sqlfile="`mktemp -u $slavedir/sql/XXXXX`"
+	for file in `find $slavedir/masterlog/ -size +0 -type f | sort`
+	do
+		echo $file
+		$mysqlbinlog $file >> $sqlfile
+		echo -n > $file
+	done
 else
-	echo "Nothing to do."
+	echo "Rsync error($?)."
+	exit 1
 fi
 
 exit 0
