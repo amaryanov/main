@@ -24,12 +24,11 @@ counter=1
 while [ "$counter" -le "$#" ]
 do
 	var=`eval echo '$'$counter`
-	varname=`echo $var | sed 's/\([^=]\+\)=\(.*\)/\1/'`
-	varval=`echo $var | sed 's/\([^=]\+\)=\(.*\)/\2/'`
+	varname=`echo $var | sed 's/\([^=]*\)=\(.*\)/\1/'`
+	varval=`echo $var | sed 's/\([^=]*\)=\(.*\)/\2/'`
 	eval $varname='$varval' 2>/dev/null
 	counter=`expr $counter + 1`
 done
-
 if [ "x$masterdir" = "x" ]
 then
 	end 'Need path to master.'
