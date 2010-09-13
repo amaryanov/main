@@ -2,9 +2,23 @@
 
 #Used variables: slavedir, masterdir, host, port, user, rsync, mysqlbinlog
 
+umask 0077
+
 serverdir="/home/www/server/"
 
 rsyncopt="-vrlcpz --ignore-existing --compress-level=9"
+
+lockdircreated=0
+
+end()
+{
+	echo $1
+	if [ $lockdircreated = "1" ]
+	then
+		rmdir $mastersyncdir
+	fi
+	exit 1
+}
 
 counter=1
 while [ "$counter" -le "$#" ]
@@ -18,15 +32,23 @@ done
 
 if [ "x$masterdir" = "x" ]
 then
-	echo 'Need path to master.'
-	exit 1
+	end 'Need path to master.'
 fi
 
 if [ "x$slavedir" = "x" ]
 then
-	echo 'Need path to slave.'
-	exit 1
+	end 'Need path to slave.'
 fi
+
+mastersyncdir="$slavedir/log/mastersync"
+mkdir $mastersyncdir
+
+if [ "$?" != "0" ]
+then
+	end "Cant create $mastersyncdir."
+fi
+lockdircreated=1
+trap 'end "You terminated the script."' TERM INT
 
 if [ "x$mysqlbinlog" = "x" ]
 then
@@ -37,8 +59,7 @@ then
 	then
 		mysqlbinlog="mysqlbinlog"
 	else
-		echo "Need mysqlbinlog."
-		exit 1
+		end "Need mysqlbinlog."
 	fi
 fi
 
@@ -51,8 +72,7 @@ then
 	then
 		rsync="rsync"
 	else
-		echo "Need rsync."
-		exit 1
+		end "Need rsync."
 	fi
 	rsync="$rsync $rsyncopt"
 fi
@@ -80,12 +100,17 @@ then
 	do
 		echo $file
 		$mysqlbinlog $file >> $sqlfile
+		if [ "$?" != "0" ]
+		then
+			echo "Cant create dump from $file"
+			continue
+		fi
 		echo -n > $file
 	done
 else
-	echo "Rsync error($?)."
-	exit 1
+	end "Rsync error($?)."
 fi
 
+rmdir $mastersyncdir
 exit 0
 
