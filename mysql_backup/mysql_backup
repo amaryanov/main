@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#Used variables: slavedir, masterdir, host, port, user, rsync, mysqlbinlog
+#Used variables: slavedir, masterdir, host, port, user, rsync, mysqlbinlog, mysql, mycnf, backupmasterlog, mysqlopts
 
 umask 0077
 
@@ -17,6 +17,12 @@ end()
 	then
 		rmdir $mastersyncdir
 	fi
+	exit 1
+}
+
+ends()
+{
+	echo "$1 Terminating without removing semaphore directory."
 	exit 1
 }
 
@@ -44,7 +50,8 @@ mkdir $mastersyncdir
 
 if [ "$?" != "0" ]
 then
-	end "Cant create $mastersyncdir."
+	end "Cant create $mastersyncdir. May be another instance of this script already running,"\
+		" or previous terminated without removing semaphore directory."
 fi
 lockdircreated=1
 trap 'end "You terminated the script."' TERM INT
@@ -62,6 +69,19 @@ then
 	fi
 fi
 
+if [ "x$mysql" = "x" ]
+then
+	if [ -e ${serverdir}build/mysql/bin/mysql ]
+	then
+		mysql="${serverdir}build/mysql/bin/mysql"
+	elif [ "x`which mysql`" != 'x' ]
+	then
+		mysql="mysql"
+	else
+		end "Need mysql."
+	fi
+fi
+
 if [ "x$rsync" = "x" ]
 then
 	if [ -e ${serverdir}build/rsync/bin/rsync ]
@@ -75,7 +95,6 @@ then
 	fi
 	rsync="$rsync $rsyncopt"
 fi
-
 if [ "x$host" != "x" ]
 then
 	ssh="ssh"
@@ -87,6 +106,25 @@ then
 	then
 		ssh="$ssh -l$user"
 	fi
+fi
+
+if [ "x$flushlogs" != "x" ]
+then
+	flushlogs="$masterdir/init.d flush-logs"
+	if [ "x$ssh" != "x" ]
+	then
+		$ssh $host $flushlogs
+	else
+		$flushlogs
+	fi
+	if [ $? != "0" ]
+	then
+		end "Cant flush master logs."
+	fi
+fi
+
+if [ "x$ssh" != "x" ]
+then
 	$rsync -e "$ssh" $host:$masterdir/log/bin/ $slavedir/masterlog/
 else
 	$rsync $masterdir/log/bin/ $slavedir/masterlog/
@@ -94,18 +132,37 @@ fi
 
 if [ "$?" = "0" ]
 then
-	sqlfile="`mktemp -u $slavedir/sql/XXXXX`"
-	for file in `find $slavedir/masterlog/ -size +0 -type f | sort`
+	starttime="`date +%s`"
+	for file in `find $slavedir/masterlog/ -size +0 -type f -printf "%f\n" | sort`
 	do
 		echo $file
-		$mysqlbinlog $file >> $sqlfile
+		logfile="$slavedir/masterlog/$file"
+		sqlfile="$slavedir/sql/$file.sql"
+		$mysqlbinlog $logfile > $sqlfile
 		if [ "$?" != "0" ]
 		then
-			echo "Cant create dump from $file"
-			continue
+			ends "Cant create dump from $file"
 		fi
-		echo -n > $file
+		if [ "x$mycnf" != "x" ]
+		then
+			mysqlopts="$mysqlopts --defaults-file=$mycnf"
+		fi
+		$mysql $mysqlopts < $sqlfile
+		if [ $? != "0" ]
+		then
+			ends "Cant import $sqlfile"
+		fi
+		if [ "x$backupmasterlog" != "x" ]
+		then
+			cp $logfile $slavedir/masterlogbackup/
+		fi
+		echo -n > $logfile
 	done
+	for file in $(find . -type f -mmin -$(expr \( `date +%s` - $starttime \) / 60 + 1) -printf "%f\n" | sed 's/\(.*\)\(\.[^\.]\+\)$/\1/' | sort | uniq)
+	do
+	echo $file
+	done
+#TODO find updated tables and create dump for them
 else
 	end "Rsync error($?)."
 fi
