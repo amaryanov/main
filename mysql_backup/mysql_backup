@@ -2,25 +2,26 @@
 
 #Usage: mysql_backup var1=val1 var2=val2 ...
 
-#Variables:
+#Necessary variables:
 #slavedir - path to slave dir data
 #masterdir - path to master dir data
 #host - ssh host
 #port - ssh port
 #user - ssh user
-#rsync - path to rsync program *optional*
-#mysqlbinlog - path to mysqlbinlog program *optional*
-#mysql - path to mysql program *optional*
-#mycnf - path to my.cnf *optional*
-#backupmasterlog - flag, make backup of downloaded master binary logs or not. If not empty then "true" *optional*
-#mysqlopts - options for mysql program *optional*
-#flushlogs - flag, flush logs on master or not. If not empty then "true" *optional*
-#makedump - flag, make dump for changed tables or not. If not empty then "true" *optional*
-#dbname - name of database to backup
-#mysqldump -  path to mysqldump program *optional*
-#dumpopts - options for mysqldump *optional*
-#commitdump - flag, commit created dumps to svn or not. If not empty then "true" *optional*
-#svn - path to svn program *optional*
+
+#Optional variables:
+#rsync - path to rsync program
+#mysqlbinlog - path to mysqlbinlog program
+#mysql - path to mysql program
+#mycnf - path to my.cnf
+#backupmasterlog - flag, make backup of downloaded master binary logs or not. If not empty then "true"
+#mysqlopts - options for mysql program
+#flushlogs - flag, flush logs on master or not. If not empty then "true"
+#makedump - flag, make dump for changed tables or not. If not empty then "true"
+#mysqldump -  path to mysqldump program
+#dumpopts - options for mysqldump
+#commitdump - flag, commit created dumps to svn or not. If not empty then "true"
+#svn - path to svn program
 
 umask 0077
 
@@ -34,6 +35,8 @@ dumpopts="--no-create-info --order-by-primary --replace --single-transaction \
 
 lockdircreated=0
 
+slavestarted=0
+
 end()
 {
 	echo $1
@@ -41,13 +44,41 @@ end()
 	then
 		rmdir $mastersyncdir
 	fi
+	if [ $slavestarted = "1" ]
+	then
+		echo -n "Stop slave..."
+		$slavedir/init.d stop
+		echo "DONE"
+	fi
 	exit 1
+}
+
+endif()
+{
+	if [ $? != "0" ]
+	then
+		end $1
+	fi
 }
 
 ends()
 {
 	echo "$1 Terminating without removing semaphore directory."
+	if [ $slavestarted = "1" ]
+	then
+		echo -n "Stop slave..."
+		$slavedir/init.d stop
+		echo "DONE"
+	fi
 	exit 1
+}
+
+endsif()
+{
+	if [ $? != "0" ]
+	then
+		ends $1
+	fi
 }
 
 echo "Parse paramenters..."
@@ -191,86 +222,82 @@ then
 	else
 		$flushlogs
 	fi
-	if [ $? != "0" ]
-	then
-		end "Cant flush master logs."
-	fi
+	endif "Cant flush master logs."
 	echo "DONE"
 fi
 
-echo -n "Try to rsync..."
+echo -n "Run rsync..."
 if [ "x$ssh" != "x" ]
 then
 	$rsync -e "$ssh" $host:$masterdir/log/bin/ $slavedir/masterlog/
 else
 	$rsync $masterdir/log/bin/ $slavedir/masterlog/
 fi
+endif "Rsync error($?)."
+echo "DONE"
 
-if [ "$?" = "0" ]
-then
+echo -n "Start slave..."
+$slavedir/init.d start
+endsif "Cant start slave"
+slavestarted=1
+echo "DONE"
+
+echo "Start processing binary logs"
+starttime="`date +%s`"
+for file in `find $slavedir/masterlog/ -size +0 -type f -printf "%f\n" | sort`
+do
+	logfile="$slavedir/masterlog/$file"
+	sqlfile="$slavedir/sql/$file.sql"
+	echo -n "Create dump from $logfile..."
+	$mysqlbinlog $logfile > $sqlfile
+	endsif "Cant create dump from $file"
 	echo "DONE"
-	echo "Start processing binary logs"
-	starttime="`date +%s`"
-	for file in `find $slavedir/masterlog/ -size +0 -type f -printf "%f\n" | sort`
-	do
-		logfile="$slavedir/masterlog/$file"
-		sqlfile="$slavedir/sql/$file.sql"
-		echo -n "Create dump from $logfile..."
-		$mysqlbinlog $logfile > $sqlfile
-		if [ "$?" != "0" ]
-		then
-			ends "Cant create dump from $file"
-		fi
-		echo "DONE"
-		echo -n "Import $sqlfile..."
-		$mysql $mysqlopts < $sqlfile
-		if [ $? != "0" ]
-		then
-			ends "Cant import $sqlfile"
-		fi
-		echo "DONE"
-		if [ "x$backupmasterlog" != "x" ]
-		then
-			echo -n "Backup $logfile..."
-			cp $logfile $slavedir/masterlogbackup/
-			if [ $? != "0" ]
-			then
-				ends "Cant backup $logfile"
-			fi
-			echo "DONE"
-		fi
-		echo -n > $logfile
-	done
-	echo "Done processing binary logs"
-	if [ "x$makedump" != "x"]
+	echo -n "Import $sqlfile..."
+	$mysql $mysqlopts < $sqlfile
+	endsif "Cant import $sqlfile"
+	echo "DONE"
+	if [ "x$backupmasterlog" != "x" ]
 	then
-		echo "Start making dumps for changed tables"
-		for table in $(find $slavedir/data/db/$dbname/ -type f -mmin -$(expr \( `date +%s` - $starttime \) / 60 + 1) \
-			-printf "%f\n" | sed 's/\(.*\)\(\.[^\.]\+\)$/\1/' | sort | uniq)
-		do
+		echo -n "Backup $logfile..."
+		cp $logfile $slavedir/masterlogbackup/
+		endsif "Cant backup $logfile"
+		echo "DONE"
+	fi
+	echo -n > $logfile
+done
+echo "Done processing binary logs"
+if [ "x$makedump" != "x"]
+then
+	echo "Start making dumps for changed tables"
+	echo -n "Try to flush tables on slave..."
+	$slavedir/init.d flush-tables
+	endsif "Cant flush tables."
+	echo "DONE"
+	for dbtable in $(find $slavedir/data/db/ -type f -mmin -$(expr \( `date +%s` - $starttime \) / 60 + 1) | \
+		sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//' | sort | uniq)
+	do
+		dbname=`echo $dbtable | sed 's/\([^\.]*\)\.\(.*\)/\1/'`
+		table=`echo $dbtable | sed 's/\([^\.]*\)\.\(.*\)/\2/'`
+		if [ -e $slavedir/dumps/$dbname/ ]
+		then
 			echo -n "Make dump for table $table in $dbname database..."
 			$mysqldump $dumpopts $dbname $table > $slavedir/dumps/$dbname/$table.sql
-			if [ $? != "0" ]
-			then
-				ends "Cant create dump for $dbname.$table"
-			fi
-			echo "DONE"
-		done
-		if [ "x$commitdump" != "x" ]
-		then
-			echo -n "Commit changed tables..."
-			$svn ci $slavedir/dumps -m "Incremental dump of tables from `date +"%Y-%m-%d %k:%M:%S%:::z"`"
-			if [ $? != "0" ]
-			then
-				ends "Cant commit changed tables"
-			fi
+			endsif "Cant create dump for $dbname.$table"
 			echo "DONE"
 		fi
-		echo "Done making dumps for changed tables"
+	done
+	if [ "x$commitdump" != "x" ]
+	then
+		echo -n "Commit changed tables..."
+		$svn ci $slavedir/dumps -m "Incremental dump of tables from `date +"%Y-%m-%d %k:%M:%S%:::z"`"
+		endsif "Cant commit changed tables"
+		echo "DONE"
 	fi
-else
-	end "Rsync error($?)."
+	echo "Done making dumps for changed tables"
 fi
+echo -n "Stop slave..."
+$slavedir/init.d stop
+echo "DONE"
 
 rmdir $mastersyncdir
 exit 0
