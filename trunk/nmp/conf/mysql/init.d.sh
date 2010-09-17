@@ -18,8 +18,8 @@ cat << EOF
 ### END INIT INFO
 mysqladmin=${mysqlinstalldir}bin/mysqladmin
 mysqld_safe=${mysqlinstalldir}bin/mysqld_safe
-mycnf=${datadir}mysql/conf/my.cnf
-mysqlpid=${datadir}run/mysql.pid
+mycnf=${mysqldatadir}conf/my.cnf
+mysqlpid=${datadir}run/${mysqlname}.pid
 
 
 opts="--defaults-file=\$mycnf"
@@ -85,6 +85,11 @@ case "\$1" in
 
 		\$mysqladmin \$opts -v shutdown
 
+		if [ "$?" != 0 ] ; then
+			echo " failed"
+			exit 1
+		fi
+
 		wait_for_pid removed \$mysqlpid
 
 		if [ -n "\$try" ] ; then
@@ -92,6 +97,28 @@ case "\$1" in
 			exit 1
 		else
 			echo " done"
+		fi
+	;;
+	flush-logs)
+		echo -n "Flushing logs "
+		\$mysqladmin \$opts -v flush-logs
+		if [ \$? != "0" ]
+		then
+			echo " error occured(\$?)"
+			exit 1
+		else
+			echo " done successfuly"
+		fi
+	;;
+	flush-tables)
+		echo -n "Flushing tables "
+		\$mysqladmin \$opts -v flush-tables
+		if [ \$? != "0" ]
+		then
+			echo " error occured(\$?)"
+			exit 1
+		else
+			echo " done successfuly"
 		fi
 	;;
 

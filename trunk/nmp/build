@@ -13,7 +13,7 @@ nginxbuild=0
 mysqlbuild=0
 phpbuild=0
 subversionbuild=0
-rsyncbuild=1
+rsyncbuild=0
 
 #download
 download=1
@@ -23,11 +23,12 @@ nginxsym=0
 mysqlsym=0
 phpsym=0
 subversionsym=0
-rsyncsym=1
+rsyncsym=0
 
 #configure
 nginxconf=0
 mysqlconf=0
+mysqlbackupconf=1
 phpconf=0
 
 #rebuild
@@ -97,6 +98,7 @@ buildlog=${srcdir}log/
 
 nginxdatadir=${datadir}nginx/
 export mysqldatadir=${datadir}mysql/
+export mysqlbackupdatadir=${datadir}mysql_backup/
 export phpdatadir=${datadir}php/
 
 dl()
@@ -205,6 +207,7 @@ if [ $nginxbuild = "0" -a \
 	$phpreb = "0" -a \
 	$nginxconf = "0" -a \
 	$mysqlconf = "0" -a \
+	$mysqlbackupconf = "0" -a \
 	$phpconf = "0" -a \
 	$subversionbuild = "0" -a \
 	$subversionreb = "0" -a \
@@ -529,7 +532,6 @@ then
 		echo "DONE" | tee -a $mysqllog
 	fi
 
-	export mysqldatadir=${mysqldatadir} #export for mysql.conf.sh
 	export mysqlinstalldir=${builddir}main/mysql/${mysqlfullver}/ #export for mysql.conf.sh
 
 	echo -n "Make mysql-${mysqlfullver}..." | tee -a $mysqllog
@@ -572,6 +574,7 @@ if [ $mysqlconf = "1" -a ! -e ${mysqldatadir} ]
 then
 	echo -n "Configure mysql-${mysqlfullver}..." | tee -a $mysqllog
 	export mysqlinstalldir=${builddir}mysql/ #export for mysql.conf.sh
+	export mysqlname="mysql"
 	mkdir -p ${mysqldatadir}conf/
 	mkdir -p ${mysqldatadir}tmp/
 	mkdir -p ${mysqldatadir}log/bin
@@ -604,6 +607,51 @@ then
 	if [ $mysqlrightsok = "1" ]
 	then
 		$sudo ${mysqlinstalldir}bin/mysql_install_db --defaults-file=${mysqldatadir}conf/my.cnf >> $mysqllog 2>&1 || exit 1
+	fi
+	echo "DONE" | tee -a $mysqllog
+fi
+if [ $mysqlbackupconf = "1" -a ! -e ${mysqlbackupdatadir} ]
+then
+	echo -n "Configure backup mysql-${mysqlfullver}..." | tee -a $mysqllog
+	export mysqlinstalldir=${builddir}mysql/ #export for mysql.conf.sh
+	export mysqldatadir=${mysqlbackupdatadir}
+	export mysqlname="mysql_backup"
+	mkdir -p ${mysqlbackupdatadir}conf/
+	mkdir -p ${mysqlbackupdatadir}tmp/
+	mkdir -p ${mysqlbackupdatadir}dumps/
+	mkdir -p ${mysqlbackupdatadir}masterlog/
+	mkdir -p ${mysqlbackupdatadir}masterlogbackup/
+	mkdir -p ${mysqlbackupdatadir}sql/
+	mkdir -p ${mysqlbackupdatadir}log/bin
+	mkdir -p ${mysqlbackupdatadir}log/innodb
+	mkdir -p ${mysqlbackupdatadir}data/db
+	mkdir -p ${mysqlbackupdatadir}data/innodb
+	${scriptdir}/conf/mysql/mysql.conf.sh > ${mysqlbackupdatadir}conf/my.cnf
+	${scriptdir}/conf/mysql/init.d.sh > ${mysqlbackupdatadir}init.d
+	chmod 755 ${mysqlbackupdatadir}init.d
+	mysqlrightsok=0
+	sudo=""
+	if [ $mysqluser != "`id -un`" ]
+	then
+		if [ "`id -un`" = "root" ]
+		then
+			chown -R ${mysqluser}:${mysqluser} ${mysqlbackupdatadir}
+			mysqlrightsok=1
+		elif [ "`which sudo`" != "" ]
+			then
+				sudo chown -R ${mysqluser}:${mysqluser} ${mysqlbackupdatadir}
+				sudo="sudo"
+				mysqlrightsok=1
+		else
+			echo "You will need to run chown -R ${mysqluser}:${mysqluser} ${mysqlbackupdatadir} as root." \
+			" And then ${mysqlinstalldir}bin/mysql_install_db --defaults-file=${mysqlbackupdatadir}/conf/my.cnf"
+		fi
+	else
+		mysqlrightsok=1
+	fi
+	if [ $mysqlrightsok = "1" ]
+	then
+		$sudo ${mysqlinstalldir}bin/mysql_install_db --defaults-file=${mysqlbackupdatadir}conf/my.cnf >> $mysqllog 2>&1 || exit 1
 	fi
 	echo "DONE" | tee -a $mysqllog
 fi
