@@ -13,14 +13,15 @@
 #rsync - path to rsync program
 #mysqlbinlog - path to mysqlbinlog program
 #mysql - path to mysql program
-#mycnf - path to my.cnf
-#backupmasterlog - flag, make backup of downloaded master binary logs or not. If not empty then "true"
-#mysqlopts - options for mysql program
-#flushlogs - flag, flush logs on master or not. If not empty then "true"
-#makedump - flag, make dump for changed tables or not. If not empty then "true"
+#backupmasterlog - flag, make backup of downloaded master binary logs or not
+#mysqlslaveopts - options for running slave mysql program
+#mysqlmasteropts - options for running master mysql program
+#mysqlbinlogopts - options for mysqlbinlog program
+#flushlogs - flag, flush logs on master or not
+#makedump - flag, make dump for changed tables or not
 #mysqldump -  path to mysqldump program
 #dumpopts - options for mysqldump
-#commitdump - flag, commit created dumps to svn or not. If not empty then "true"
+#commitdump - flag, commit created dumps to svn or not
 #svn - path to svn program
 
 umask 0077
@@ -29,13 +30,32 @@ serverdir="/home/www/server/"
 
 rsyncopt="-vrlcpz --ignore-existing --compress-level=9"
 
-dumpopts="--no-create-info --order-by-primary --replace --single-transaction \
-		  --skip-opt --tz-utc --verbose --skip-comments --add-locks --skip-add-drop-table \
+dumpopts="--no-create-info --order-by-primary --replace --single-transaction --skip-opt \
+		  --tz-utc --verbose --skip-comments --add-locks --skip-add-drop-table \
 		  --complete-insert --default-character-set=utf8"
 
 lockdircreated=0
 
 slavestarted=0
+
+startslave()
+{
+	echo -n "Start slave..."
+	$slavedir/init.d start
+	endsif "Cant start slave"
+	slavestarted=1
+	echo "DONE"
+}
+
+stopslave()
+{
+	if [ "$slavestarted" = "1" ]
+	then
+		echo -n "Stop slave..."
+		$slavedir/init.d stop
+		echo "DONE"
+	fi
+}
 
 end()
 {
@@ -44,12 +64,7 @@ end()
 	then
 		rmdir $mastersyncdir
 	fi
-	if [ $slavestarted = "1" ]
-	then
-		echo -n "Stop slave..."
-		$slavedir/init.d stop
-		echo "DONE"
-	fi
+	stopslave
 	exit 1
 }
 
@@ -57,19 +72,14 @@ endif()
 {
 	if [ $? != "0" ]
 	then
-		end $1
+		end "$1 (exit status $?)"
 	fi
 }
 
 ends()
 {
-	echo "$1 Terminating without removing semaphore directory."
-	if [ $slavestarted = "1" ]
-	then
-		echo -n "Stop slave..."
-		$slavedir/init.d stop
-		echo "DONE"
-	fi
+	echo "$1 (exit status $?) Terminating without removing semaphore directory."
+	stopslave
 	exit 1
 }
 
@@ -77,7 +87,7 @@ endsif()
 {
 	if [ $? != "0" ]
 	then
-		ends $1
+		ends "$1"
 	fi
 }
 
@@ -86,14 +96,18 @@ counter=1
 while [ "$counter" -le "$#" ]
 do
 	var=`eval echo '$'$counter`
-	varname=`echo $var | sed 's/\([^=]*\)=\(.*\)/\1/'`
-	varval=`echo $var | sed 's/\([^=]*\)=\(.*\)/\2/'`
-	echo "$varname = $varval"
-	eval $varname='$varval' 2>/dev/null
+	assignpos=`expr index $var "="`
+	if [ $assignpos != "0" ]
+	then
+		varname=`echo $var | sed 's/\([^=]*\)=\(.*\)/\1/'`
+		varval=`echo $var | sed 's/\([^=]*\)=\(.*\)/\2/'`
+		eval $varname='$varval' 2>/dev/null
+	else
+		eval $var='1' 2>/dev/null
+	fi
 	counter=`expr $counter + 1`
 done
 echo "Done Parsing parameters"
-
 if [ "x$masterdir" = "x" ]
 then
 	end 'Need path to master.'
@@ -147,7 +161,7 @@ then
 	echo $mysqldump
 fi
 
-if [ "x$commitdump" != "x" -a "x$svn" = "x" ]
+if [ "$commitdump" = "1" -a "x$svn" = "x" ]
 then
 	echo -n "Looking for svn..."
 	if [ -e ${serverdir}build/mysql/bin/svn ]
@@ -190,12 +204,6 @@ then
 		end "Need rsync."
 	fi
 	echo $rsync
-	rsync="$rsync $rsyncopt"
-fi
-
-if [ "x$mycnf" != "x" ]
-then
-	mysqlopts="$mysqlopts --defaults-file=$mycnf"
 fi
 
 if [ "x$host" != "x" ]
@@ -212,69 +220,93 @@ then
 	echo "ssh = $ssh"
 fi
 
-if [ "x$flushlogs" != "x" ]
+if [ "$flushlogs" = "1" ]
 then
 	echo -n "Try to flush logs..."
-	flushlogs="$masterdir/init.d flush-logs"
+	flushlogscmd="$masterdir/init.d flush-logs"
 	if [ "x$ssh" != "x" ]
 	then
-		$ssh $host $flushlogs
+		$ssh $host $flushlogscmd
 	else
-		$flushlogs
+		$flushlogscmd
 	fi
 	endif "Cant flush master logs."
 	echo "DONE"
 fi
 
-echo -n "Run rsync..."
+echo -n "Get current master binary log file name..."
+mysqlmasteropts="$mysqlmasteropts --defaults-file=$masterdir/conf/my.cnf"
+lastlog=""
+lastlogcmd="$mysql $mysqlmasteropts -e 'show master status' -EN | head -n 2 | tail -n 1"
 if [ "x$ssh" != "x" ]
 then
-	$rsync -e "$ssh" $host:$masterdir/log/bin/ $slavedir/masterlog/
+	lastlogcmd="$ssh $host $lastlogcmd"
+fi
+lastlog="`eval $lastlogcmd`"
+endif "Cant get current master binary log file name"
+echo $lastlog
+
+echo -n "Run rsync..."
+if [ "x$lastlog" != "x" ]
+then
+	rsyncopt="$rsyncopt --exclude=$lastlog"
+fi
+
+if [ "x$ssh" != "x" ]
+then
+	$rsync $rsyncopt -e "$ssh" $host:$masterdir/log/bin/ $slavedir/masterlog/
 else
-	$rsync $masterdir/log/bin/ $slavedir/masterlog/
+	$rsync $rsyncopt $masterdir/log/bin/ $slavedir/masterlog/
 fi
 endif "Rsync error($?)."
 echo "DONE"
 
-echo -n "Start slave..."
-$slavedir/init.d start
-endsif "Cant start slave"
-slavestarted=1
-echo "DONE"
+logs=`find $slavedir/masterlog/ -size +0 -type f -printf "%f\n" | sort`
+if [ "x$logs" != "x" ]
+then
+	startslave
 
-echo "Start processing binary logs"
-starttime="`date +%s`"
-for file in `find $slavedir/masterlog/ -size +0 -type f -printf "%f\n" | sort`
-do
-	logfile="$slavedir/masterlog/$file"
-	sqlfile="$slavedir/sql/$file.sql"
-	echo -n "Create dump from $logfile..."
-	$mysqlbinlog $logfile > $sqlfile
-	endsif "Cant create dump from $file"
-	echo "DONE"
-	echo -n "Import $sqlfile..."
-	$mysql $mysqlopts < $sqlfile
-	endsif "Cant import $sqlfile"
-	echo "DONE"
-	if [ "x$backupmasterlog" != "x" ]
-	then
-		echo -n "Backup $logfile..."
-		cp $logfile $slavedir/masterlogbackup/
-		endsif "Cant backup $logfile"
+	echo "Start processing binary logs"
+	mysqlslaveopts="$mysqlslaveopts --defaults-file=$slavedir/conf/my.cnf"
+	mysqlbinlogopts="$mysqlbinlogopts --verbose"
+	starttime="`date +%s`"
+	for file in $logs
+	do
+		logfile="$slavedir/masterlog/$file"
+		sqlfile="$slavedir/sql/$file.sql"
+		echo -n "Create dump from $logfile..."
+		$mysqlbinlog $mysqlbinlogopts $logfile > $sqlfile
+		endsif "Cant create dump from $file"
 		echo "DONE"
-	fi
-	echo -n > $logfile
-done
-echo "Done processing binary logs"
-if [ "x$makedump" != "x"]
+		echo -n "Import $sqlfile..."
+		$mysql $mysqlslaveopts < $sqlfile
+		endsif "Cant import $sqlfile"
+		echo "DONE"
+		if [ "$backupmasterlog" = "1" ]
+		then
+			echo -n "Backup $logfile..."
+			cp $logfile $slavedir/masterlogbackup/
+			endsif "Cant backup $logfile"
+			echo "DONE"
+		fi
+		echo -n > $logfile
+	done
+	echo "Done processing binary logs"
+else
+	echo "There are no new logs"
+fi
+
+if [ "$makedump" = "1" ]
 then
 	echo "Start making dumps for changed tables"
 	echo -n "Try to flush tables on slave..."
 	$slavedir/init.d flush-tables
 	endsif "Cant flush tables."
 	echo "DONE"
-	for dbtable in $(find $slavedir/data/db/ -type f -mmin -$(expr \( `date +%s` - $starttime \) / 60 + 1) | \
-		sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//' | sort | uniq)
+	stoptime=`date +%s`
+	mins="`expr \( $stoptime - $starttime \) / 60 + 2`"
+	for dbtable in `find $slavedir/data/db/ -type f -mmin -$mins | \
+		sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//' | sort | uniq`
 	do
 		dbname=`echo $dbtable | sed 's/\([^\.]*\)\.\(.*\)/\1/'`
 		table=`echo $dbtable | sed 's/\([^\.]*\)\.\(.*\)/\2/'`
@@ -286,18 +318,17 @@ then
 			echo "DONE"
 		fi
 	done
-	if [ "x$commitdump" != "x" ]
+	if [ "$commitdump" = "1" -a "x`$svn st $slavedir/dumps`" != "x" ]
 	then
 		echo -n "Commit changed tables..."
-		$svn ci $slavedir/dumps -m "Incremental dump of tables from `date +"%Y-%m-%d %k:%M:%S%:::z"`"
+		$svn ci $slavedir/dumps -m "Incremental dump of tables from `date +'%Y-%m-%d %k:%M:%S%:::z'`"
 		endsif "Cant commit changed tables"
 		echo "DONE"
 	fi
 	echo "Done making dumps for changed tables"
 fi
-echo -n "Stop slave..."
-$slavedir/init.d stop
-echo "DONE"
+
+stopslave
 
 rmdir $mastersyncdir
 exit 0
