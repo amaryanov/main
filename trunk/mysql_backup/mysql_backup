@@ -30,7 +30,7 @@ serverdir="/home/www/server/"
 
 rsyncopt="-vrlcpz --ignore-existing --compress-level=9"
 
-dumpopts="--no-create-info --order-by-primary --replace --single-transaction --skip-opt \
+dumpopts=" --order-by-primary --replace --skip-opt \
 		  --tz-utc --verbose --skip-comments --add-locks --skip-add-drop-table \
 		  --complete-insert --default-character-set=utf8"
 
