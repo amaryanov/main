@@ -312,7 +312,7 @@ then
 	echo -n "Find changed tables($try seconds) "
 	while test $try -gt 0 ; do
 		echo -n "$try "
-		fl=`find $slavedir/data/db/ -type f -mmin -$mins | \
+		fl=`find $slavedir/data/db/ -type f -mmin -$mins | grep -v db\.opt | \
 			sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//' | sort | uniq`
 		if [ "x$fl" != "x" ]
 		then
@@ -327,13 +327,15 @@ then
 	do
 		dbname=`echo $dbtable | sed 's/\([^\.]*\)\.\(.*\)/\1/'`
 		table=`echo $dbtable | sed 's/\([^\.]*\)\.\(.*\)/\2/'`
-		if [ -e $slavedir/dumps/$dbname/ ]
+		if [ ! -e $slavedir/dumps/$dbname/ ]
 		then
-			echo -n "Make dump for table $table in $dbname database..."
-			$mysqldump $dumpopts $dbname $table > $slavedir/dumps/$dbname/$table.sql
-			endsif "Cant create dump for $dbname.$table"
-			echo "DONE"
+			mkdir $slavedir/dumps/$dbname/
+			endsif "Cand create directory $slavedir/dumps/$dbname/"
 		fi
+		echo -n "Make dump for $dbname.$table ..."
+		$mysqldump $dumpopts $dbname $table > $slavedir/dumps/$dbname/$table.sql
+		endsif "Cant create dump for $dbname.$table"
+		echo "DONE"
 	done
 	echo -n 'Unlock tables...'
 	$mysql $mysqlslaveopts -e "UNLOCK TABLES"
@@ -341,6 +343,10 @@ then
 	if [ "$commitdump" = "1" -a "x`$svn st $slavedir/dumps`" != "x" ]
 	then
 		echo -n "Commit changed tables..."
+		for file in `svn st $slavedir/dumps | grep "^?" | sed 's/\? *//'`
+		do
+			svn add $file
+		done
 		$svn ci $slavedir/dumps -m "Incremental dump of tables from `date +'%Y-%m-%d %k:%M:%S%:::z'`"
 		endsif "Cant commit changed tables"
 		echo "DONE"
