@@ -298,15 +298,32 @@ fi
 
 if [ "$makedump" = "1" ]
 then
+	stopslave
+	startslave
 	echo "Start making dumps for changed tables"
-	echo -n "Try to flush tables on slave..."
-	$slavedir/init.d flush-tables
+	echo -n "Try to flush and lock tables on slave..."
+	$mysql $mysqlslaveopts -e "FLUSH TABLES WITH READ LOCK"
 	endsif "Cant flush tables."
 	echo "DONE"
 	stoptime=`date +%s`
-	mins="`expr \( $stoptime - $starttime \) / 60 + 2`"
-	for dbtable in `find $slavedir/data/db/ -type f -mmin -$mins | \
-		sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//' | sort | uniq`
+	mins="`expr \( $stoptime - $starttime \) / 60 + 1`"
+	try=20
+	fl=""
+	echo -n "Find changed tables($try seconds) "
+	while test $try -gt 0 ; do
+		echo -n "$try "
+		fl=`find $slavedir/data/db/ -type f -mmin -$mins | \
+			sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//' | sort | uniq`
+		if [ "x$fl" != "x" ]
+		then
+			echo -n "\nChanged tables: $fl"
+			break
+		fi
+		try=`expr $try - 1`
+		sleep 1
+	done
+	echo
+	for dbtable in $fl
 	do
 		dbname=`echo $dbtable | sed 's/\([^\.]*\)\.\(.*\)/\1/'`
 		table=`echo $dbtable | sed 's/\([^\.]*\)\.\(.*\)/\2/'`
@@ -318,6 +335,9 @@ then
 			echo "DONE"
 		fi
 	done
+	echo -n 'Unlock tables...'
+	$mysql $mysqlslaveopts -e "UNLOCK TABLES"
+	echo 'DONE'
 	if [ "$commitdump" = "1" -a "x`$svn st $slavedir/dumps`" != "x" ]
 	then
 		echo -n "Commit changed tables..."
