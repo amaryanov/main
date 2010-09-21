@@ -14,6 +14,7 @@ mysqlbuild=0
 phpbuild=0
 subversionbuild=0
 rsyncbuild=0
+postfixbuild=1
 
 #download
 download=1
@@ -24,11 +25,12 @@ mysqlsym=0
 phpsym=0
 subversionsym=0
 rsyncsym=0
+postfixsym=1
 
 #configure
 nginxconf=0
 mysqlconf=0
-mysqlbackupconf=1
+mysqlbackupconf=0
 phpconf=0
 
 #rebuild
@@ -37,6 +39,7 @@ mysqlreb=0
 phpreb=0
 subversionreb=0
 rsyncreb=0
+postfixreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -56,6 +59,8 @@ sqlitereb="0"
 #users
 export wwwuser="www"
 export mysqluser="mysql"
+postfixuser="postfix"
+postdropgroup="postdrop"
 #export wwwuser="`id -un`"
 #export mysqluser="`id -un`"
 
@@ -67,6 +72,7 @@ mysqlfullver=$mysqlver.$mysqlsubver
 phpver="5.3.3"
 subversionver="1.6.12"
 rsyncver="3.0.7"
+postfixver="2.7.1"
 eaccver="0.9.6.1"
 zlibver="1.2.5"
 opsslver="0.9.8o"
@@ -198,6 +204,14 @@ if [ $rsyncreb = "1" -a ! -e ${builddir}main/rsync/${rsyncver} ]
 then
 	rsyncreb=0
 fi
+if [ $postfixbuild = "1" -a -e ${builddir}main/postfix/${postfixver} ]
+then
+	postfixbuild="0"
+fi
+if [ $postfixreb = "1" -a ! -e ${builddir}main/postfix/${postfixver} ]
+then
+	postfixreb=0
+fi
 
 if [ $nginxbuild = "0" -a \
 	$mysqlbuild = "0" -a \
@@ -212,7 +226,9 @@ if [ $nginxbuild = "0" -a \
 	$subversionbuild = "0" -a \
 	$subversionreb = "0" -a \
 	$rsyncbuild = "0" -a \
-	$rsyncreb = "0" \
+	$rsyncreb = "0" -a \
+	$postfixbuild = "0" -a \
+	$postfixreb = "0" \
 ]
 then
 	echo 'Nothing to do.'
@@ -261,6 +277,8 @@ mkdir -p ${buildlog}sqlite/${sqlitever}
 sqlitelog=`mktemp -u ${buildlog}sqlite/${sqlitever}/XXX`
 mkdir -p ${buildlog}rsync/${rsyncver}
 rsynclog=`mktemp -u ${buildlog}rsync/${rsyncver}/XXX`
+mkdir -p ${buildlog}postfix/${postfixver}
+postfixlog=`mktemp -u ${buildlog}postfix/${postfixver}/XXX`
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -478,7 +496,8 @@ fi
 if [ $mysqlbuild = "1" -o $mysqlreb = "1" ]
 then
 	echo "START BUILD mysql-${mysqlfullver}" | tee -a $mysqllog
-	if [ "`id -un ${mysqluser} 2>/dev/null`" != "${mysqluser}" -o "`id -gn ${mysqluser} 2>/dev/null`" != "${mysqluser}" ]
+	if [ "`id -un ${mysqluser} 2>/dev/null`" != "${mysqluser}" \
+		-o "`grep -iq '^'${mysqluser}':' /etc/group && echo $? || echo $? 2>/dev/null`" != "0" ]
 	then
 		echo "Need ${mysqluser} user and ${mysqluser} group"
 		exit 1
@@ -660,7 +679,8 @@ fi
 if [ $phpbuild = "1" -o $phpreb = "1" ]
 then
 	echo "START BUILD php-${phpver}" | tee -a $phplog
-	if [ "`id -un ${wwwuser} 2>/dev/null`" != "${wwwuser}" -o "`id -gn ${wwwuser} 2>/dev/null`" != "${wwwuser}" ]
+	if [ "`id -un ${wwwuser} 2>/dev/null`" != "${wwwuser}" \
+		-o "`grep -iq '^'${wwwuser}':' /etc/group && echo $? || echo $? 2>/dev/null`" != "0" ]
 	then
 		echo "Need ${wwwuser} user and ${wwwuser} group."
 		exit 1
@@ -1289,7 +1309,6 @@ then
 		echo "DONE" | tee -a $rsynclog
 	fi
 	echo -n "Make rsync-${rsyncver}..." | tee -a $rsynclog
-	rmdata=0
 	cd rsync-${rsyncver}/
 		./configure --prefix=${builddir}main/rsync/${rsyncver} >> $rsynclog 2>&1 && \
 		make >> $rsynclog 2>&1 && \
@@ -1308,6 +1327,82 @@ then
 	fi
 	echo "DONE" | tee -a $rsynclog
 	echo "DONE BUILD rsync-${rsyncver}" | tee -a $rsynclog
+fi
+
+#postfix
+if [ $postfixbuild = "1" -o $postfixreb = "1" ]
+then
+	echo "START BUILD postfix-${postfixver}" | tee -a $postfixlog
+	if [ "`id -un ${postfixuser} 2>/dev/null`" != "${postfixuser}" \
+		-o "`grep -iq '^'${postdropgroup}':' /etc/group && echo $? || echo $? 2>/dev/null`" != "0" ]
+	then
+		echo "Need ${postfixuser} user and ${postdropgroup} group"
+		exit 1
+	fi
+	if [ -e postfix-${postfixver} ]
+	then
+		echo -n "Clean postfix-${postfixver}..." | tee -a $postfixlog
+		cd postfix-${postfixver}
+			make tidy >> $postfixlog 2>&1
+		cd $OLDPWD
+		echo "DONE" | tee -a $postfixlog
+	else
+		cd $archdir
+			dl http://www.artfiles.org/postfix.org/postfix-release/official/postfix-${postfixver}.tar.gz \
+				postfix-${postfixver}.tar.gz $postfixlog
+		cd $OLDPWD
+		echo -n "Unpack postfix-${postfixver}..." | tee -a $postfixlog
+		tar -xzvf ${archdir}postfix-${postfixver}.tar.gz >> $postfixlog 2>&1
+		echo "DONE" | tee -a $postfixlog
+	fi
+	echo -n "Make postfix-${postfixver}..." | tee -a $postfixlog
+	postfixdatadir=${datadir}postfix/
+	postfixbuilddir=${builddir}main/postfix/${postfixver}/
+	cd postfix-${postfixver}/
+		make makefiles CCARGS='-DDEF_CONFIG_DIR=\"'${postfixdatadir}'conf/\" \
+			-DEF_COMMAND_DIR=\"'${postfixbuilddir}'bin/\" \
+			-DEF_DAEMON_DIR=\"'${postfixbuilddir}'daemon/\" \
+			-DEF_DATA_DIR=\"'${postfixdatadir}'data/\" \
+			-DEF_MAILQ_PATH=\"'${postfixbuilddir}'bin/mailq\" \
+			-DEF_HTML_DIR=\"'${postfixbuilddir}'html/\" \
+			-DEF_MANPAGE_DIR=\"'${postfixbuilddir}'man/\" \
+			-DEF_NEWALIAS_PATH=\"'${postfixbuilddir}'bin/newaliases\" \
+			-DEF_QUEUE_DIR=\"'${postfixdatadir}'queue/\" \
+			-DEF_README_DIR=\"'${postfixbuilddir}'readme/\" \
+			-DEF_SENDMAIL_PATH=\"'${postfixbuilddir}'bin/sendmail\"' >> $postfixlog 2>&1 && \
+		make >> $postfixlog 2>&1 && \
+		if [ -e ${builddir}main/postfix/${postfixver} ]
+		then
+			mkdir -p  ${oldbuilddir}postfix/${postfixver}
+			mv ${builddir}main/postfix/${postfixver} `mktemp -ud ${oldbuilddir}postfix/${postfixver}/XXX` >> $postfixlog 2>&1
+		fi && \
+		/bin/sh ./postfix-install \
+			-non-interactive \
+			install_root=/ \
+			tempdir=${postfixdatadir}tmp/ \
+			config_directory=${postfixdatadir}conf/ \
+			data_directory=${postfixdatadir}data/ \
+			daemon_directory=${postfixbuilddir}bin/ \
+			command_directory=${postfixbuilddir}bin/ \
+			html_directory=${postfixbuilddir}html/ \
+			queue_directory=${postfixdatadir}queue/ \
+			sendmail_path=${postfixbuilddir}bin/sendmail \
+			newaliases_path=${postfixbuilddir}bin/newaliases \
+			mailq_path=${postfixbuilddir}bin/mailq \
+			mail_owner=${postfixuser} \
+			setgid_group=${postdropgroup} \
+			manpage_directory=${postfixbuilddir}man/ \
+			sample_directory=${postfixbuilddir}sample/ \
+			readme_directory=${postfixbuilddir}readme/ >> $postfixlog 2>&1 || exit 1
+	if [ $postfixsym = "1" ]
+	then
+		cd ${builddir}
+			rm -f postfix
+			ln -s main/postfix/${postfixver} postfix
+		cd $OLDPWD
+	fi
+	echo "DONE" | tee -a $postfixlog
+	echo "DONE BUILD postfix-${postfixver}" | tee -a $postfixlog
 fi
 
 exit 0
