@@ -39,7 +39,7 @@ mysqlreb=0
 phpreb=0
 subversionreb=0
 rsyncreb=0
-postfixreb=0
+postfixreb=1
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -1357,7 +1357,12 @@ then
 	fi
 	echo -n "Make postfix-${postfixver}..." | tee -a $postfixlog
 	postfixdatadir=${datadir}postfix/
-	postfixbuilddir=${builddir}main/postfix/${postfixver}/
+	export postfixbuilddir=${builddir}main/postfix/${postfixver}/
+	confexist=0
+	if [ -e ${postfixdatadir}conf/ ]
+	then
+		confexist=1
+	fi
 	cd postfix-${postfixver}/
 		make makefiles CCARGS='-DDEF_CONFIG_DIR=\"'${postfixdatadir}'conf/\" \
 			-DEF_COMMAND_DIR=\"'${postfixbuilddir}'bin/\" \
@@ -1396,11 +1401,19 @@ then
 			readme_directory=${postfixbuilddir}readme/ >> $postfixlog 2>&1 || exit 1
 	if [ $postfixsym = "1" ]
 	then
+		export postfixbuilddir=${builddir}postfix/
 		cd ${builddir}
 			rm -f postfix
 			ln -s main/postfix/${postfixver} postfix
 		cd $OLDPWD
+		if [ $confexist = "0" ]
+		then
+			sed 's/main\/postfix\/'${postfixver}'/postfix/' ${postfixdatadir}conf/main.cf > ${postfixdatadir}tmp/main.cf.tmp \
+				&& mv ${postfixdatadir}tmp/main.cf.tmp ${postfixdatadir}conf/main.cf
+		fi
 	fi
+	${scriptdir}/conf/postfix/init.d.sh > ${postfixdatadir}init.d
+	chmod 755 ${postfixdatadir}init.d
 	echo "DONE" | tee -a $postfixlog
 	echo "DONE BUILD postfix-${postfixver}" | tee -a $postfixlog
 fi
