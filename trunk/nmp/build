@@ -1485,11 +1485,12 @@ then
 		APPENDDEF(\`bld_dkim_filter_LIBDIRS', \`-L${libmilterbuilddir}')
 		define(\`confEBINDIR', \`${dkimmilterbuilddir}bin/')
 		define(\`confUBINDIR', \`${dkimmilterbuilddir}bin/')
-		APPENDDEF(\`confNO_MAN_BUILD')
-		APPENDDEF(\`confNO_MAN_INSTALL')
 		define(\`confINSTALL', \`\${BUILDBIN}/install.sh')
 		define(\`confUBINOWN',\`""')
 		define(\`confUBINGRP',\`""')
+		define(\`confMANROOT', \`${dkimmilterbuilddir}man/man')
+		define(\`confMANGRP',\`""')
+		define(\`confMANOWN',\`""')
 EOF
 		./Build >> $dkimmilterlog 2>&1 && \
 		if [ -e ${dkimmilterbuilddir} ]
@@ -1498,11 +1499,14 @@ EOF
 			mv ${dkimmilterbuilddir} `mktemp -ud ${oldbuilddir}dkim-milter/${dkimmilterver}/XXX` >> $dkimmilterlog 2>&1
 		fi && \
 		mkdir -p ${dkimmilterbuilddir}/bin >> $dkimmilterlog 2>&1 &&
+		mkdir -p ${dkimmilterbuilddir}/man >> $dkimmilterlog 2>&1 &&
+		mkdir -p ${dkimmilterbuilddir}/man/man5 >> $dkimmilterlog 2>&1 &&
+		mkdir -p ${dkimmilterbuilddir}/man/man8 >> $dkimmilterlog 2>&1 &&
 		cd `cd dkim-filter && ./Build -M && cd $OLDPWD` && make install >> $dkimmilterlog 2>&1 || exit
 	if [ $dkimmiltersym = "1" ]
 	then
 		cd ${builddir}
-			rm -f dkimmilter
+			rm -f dkim-milter
 			ln -s main/dkim-milter/${dkimmilterver} dkim-milter
 		cd $OLDPWD
 	fi
