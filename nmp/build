@@ -15,7 +15,7 @@ phpbuild=0
 subversionbuild=0
 rsyncbuild=0
 postfixbuild=0
-dkimmilterbuild=1
+dkimbuild=0
 
 #download
 download=1
@@ -27,13 +27,14 @@ phpsym=0
 subversionsym=0
 rsyncsym=0
 postfixsym=0
-dkimmiltersym=1
+dkimsym=0
 
 #configure
 nginxconf=0
 mysqlconf=0
 mysqlbackupconf=0
 phpconf=0
+dkimconf=1
 
 #rebuild
 nginxreb=0
@@ -42,7 +43,7 @@ phpreb=0
 subversionreb=0
 rsyncreb=0
 postfixreb=0
-dkimmilterreb=1
+dkimreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -94,7 +95,7 @@ aprver="1.4.2"
 aprutilver="1.3.9"
 neonver="0.29.3"
 sqlitever="3.7.2"
-dkimmilterver="2.8.3"
+dkimver="2.8.3"
 sendmailver="8.14.4"
 #####END SCRIPT CONFIG#####
 
@@ -218,13 +219,13 @@ if [ $postfixreb = "1" -a ! -e ${builddir}main/postfix/${postfixver} ]
 then
 	postfixreb=0
 fi
-if [ $dkimmilterbuild = "1" -a -e ${builddir}main/dkim-milter/${dkimmilterver} ]
+if [ $dkimbuild = "1" -a -e ${builddir}main/dkim-milter/${dkimver} ]
 then
-	dkimmilterbuild="0"
+	dkimbuild="0"
 fi
-if [ $dkimmilterreb = "1" -a ! -e ${builddir}main/dkim-milter/${dkimmilterver} ]
+if [ $dkimreb = "1" -a ! -e ${builddir}main/dkim-milter/${dkimver} ]
 then
-	dkimmilterreb=0
+	dkimreb=0
 fi
 
 if [ $nginxbuild = "0" -a \
@@ -243,8 +244,9 @@ if [ $nginxbuild = "0" -a \
 	$rsyncreb = "0" -a \
 	$postfixbuild = "0" -a \
 	$postfixreb = "0" -a \
-	$dkimmilterbuild = "0" -a \
-	$dkimmilterreb = "0" \
+	$dkimbuild = "0" -a \
+	$dkimreb = "0" -a\
+	$dkimconf = "0" \
 ]
 then
 	echo 'Nothing to do.'
@@ -295,8 +297,8 @@ mkdir -p ${buildlog}rsync/${rsyncver}
 rsynclog=`mktemp -u ${buildlog}rsync/${rsyncver}/XXX`
 mkdir -p ${buildlog}postfix/${postfixver}
 postfixlog=`mktemp -u ${buildlog}postfix/${postfixver}/XXX`
-mkdir -p ${buildlog}dkim-milter/${dkimmilterver}
-dkimmilterlog=`mktemp -u ${buildlog}dkim-milter/${dkimmilterver}/XXX`
+mkdir -p ${buildlog}dkim-milter/${dkimver}
+dkimlog=`mktemp -u ${buildlog}dkim-milter/${dkimver}/XXX`
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -1435,83 +1437,98 @@ then
 	echo "DONE" | tee -a $postfixlog
 	echo "DONE BUILD postfix-${postfixver}" | tee -a $postfixlog
 fi
-#dkimmilter
-if [ $dkimmilterbuild = "1" -o $dkimmilterreb = "1" ]
+#dkim-milter
+if [ $dkimbuild = "1" -o $dkimreb = "1" ]
 then
-	echo "START BUILD dkim-milter-${dkimmilterver}" | tee -a $dkimmilterlog
+	echo "START BUILD dkim-milter-${dkimver}" | tee -a $dkimlog
 	if [ ! -e sendmail-${sendmailver} ]
 	then
 		cd $archdir
-			dl http://sendmail.cybermirror.org/sendmail.${sendmailver}.tar.gz sendmail-${sendmailver}.tar.gz $dkimmilterlog
+			dl http://sendmail.cybermirror.org/sendmail.${sendmailver}.tar.gz sendmail-${sendmailver}.tar.gz $dkimlog
 		cd $OLDPWD
-		echo -n "Unpack sendmail-${sendmailver}..." | tee -a $dkimmilterlog
-		tar -xzvf ${archdir}sendmail-${sendmailver}.tar.gz >> $dkimmilterlog 2>&1
-		echo "DONE" | tee -a $dkimmilterlog
+		echo -n "Unpack sendmail-${sendmailver}..." | tee -a $dkimlog
+		tar -xzvf ${archdir}sendmail-${sendmailver}.tar.gz >> $dkimlog 2>&1
+		echo "DONE" | tee -a $dkimlog
 	fi
 	libmilterbuilddir=`cd sendmail-${sendmailver}/libmilter && ./Build -M && cd $OLDPWD`
 	if [ ! -e $libmilterbuilddir -o $libmilterreb = "1" ]
 	then
-		echo -n "Build libmilter..." | tee -a $dkimmilterlog
+		echo -n "Build libmilter..." | tee -a $dkimlog
 		if [ -e $libmilterbuilddir ]
 		then
 			rm -r `dirname $libmilterbuilddir`
 		fi
 		cd sendmail-${sendmailver}/libmilter
-			./Build >> $dkimmilterlog 2>&1 || exit 1
+			./Build >> $dkimlog 2>&1 || exit 1
 		cd $OLDPWD
-		echo "DONE" | tee -a $dkimmilterlog
+		echo "DONE" | tee -a $dkimlog
 	fi
-	if [ -e dkim-milter-${dkimmilterver} ]
+	if [ -e dkim-milter-${dkimver} ]
 	then
-		echo -n "Clean dkim-milter-${dkimmilterver}..." | tee -a $dkimmilterlog
-		cd dkim-milter-${dkimmilterver}
-			rm -r $(dirname `cd dkim-filter && ./Build -M && cd $OLDPWD`) >> $dkimmilterlog 2>&1
+		echo -n "Clean dkim-milter-${dkimver}..." | tee -a $dkimlog
+		cd dkim-milter-${dkimver}
+			rm -r $(dirname `cd dkim-filter && ./Build -M && cd $OLDPWD`) >> $dkimlog 2>&1
 		cd $OLDPWD
-		echo "DONE" | tee -a $dkimmilterlog
+		echo "DONE" | tee -a $dkimlog
 	else
 		cd $archdir
-			dl http://sourceforge.net/projects/dkim-milter/files/DKIM%20Milter/${dkimmilterver}/dkim-milter-${dkimmilterver}.tar.gz/download \
-				dkim-milter-${dkimmilterver}.tar.gz $dkimmilterlog
+			dl http://sourceforge.net/projects/dkim-milter/files/DKIM%20Milter/${dkimver}/dkim-milter-${dkimver}.tar.gz/download \
+				dkim-milter-${dkimver}.tar.gz $dkimlog
 		cd $OLDPWD
-		echo -n "Unpack dkim-milter-${dkimmilterver}..." | tee -a $dkimmilterlog
-		tar -xzvf ${archdir}dkim-milter-${dkimmilterver}.tar.gz >> $dkimmilterlog 2>&1
-		echo "DONE" | tee -a $dkimmilterlog
+		echo -n "Unpack dkim-milter-${dkimver}..." | tee -a $dkimlog
+		tar -xzvf ${archdir}dkim-milter-${dkimver}.tar.gz >> $dkimlog 2>&1
+		echo "DONE" | tee -a $dkimlog
 	fi
-	echo -n "Make dkim-milter-${dkimmilterver}..." | tee -a $dkimmilterlog
-	dkimmilterbuilddir=${builddir}main/dkim-milter/${dkimmilterver}/
-	cd dkim-milter-${dkimmilterver}/
+	echo -n "Make dkim-milter-${dkimver}..." | tee -a $dkimlog
+	dkimbuilddir=${builddir}main/dkim-milter/${dkimver}/
+	cd dkim-milter-${dkimver}/
 		cat > devtools/Site/site.config.m4 << EOF &&
 		APPENDDEF(\`bld_dkim_filter_INCDIRS', \`-I${srcdir}sendmail-${sendmailver}/include')
 		APPENDDEF(\`bld_dkim_filter_LIBDIRS', \`-L${libmilterbuilddir}')
-		define(\`confEBINDIR', \`${dkimmilterbuilddir}bin/')
-		define(\`confUBINDIR', \`${dkimmilterbuilddir}bin/')
+		define(\`confEBINDIR', \`${dkimbuilddir}bin/')
+		define(\`confUBINDIR', \`${dkimbuilddir}bin/')
 		define(\`confINSTALL', \`\${BUILDBIN}/install.sh')
 		define(\`confUBINOWN',\`""')
 		define(\`confUBINGRP',\`""')
-		define(\`confMANROOT', \`${dkimmilterbuilddir}man/man')
+		define(\`confMANROOT', \`${dkimbuilddir}man/man')
 		define(\`confMANGRP',\`""')
 		define(\`confMANOWN',\`""')
 EOF
-		./Build >> $dkimmilterlog 2>&1 && \
-		if [ -e ${dkimmilterbuilddir} ]
+		./Build >> $dkimlog 2>&1 && \
+		if [ -e ${dkimbuilddir} ]
 		then
-			mkdir -p  ${oldbuilddir}dkim-milter/${dkimmilterver}
-			mv ${dkimmilterbuilddir} `mktemp -ud ${oldbuilddir}dkim-milter/${dkimmilterver}/XXX` >> $dkimmilterlog 2>&1
+			mkdir -p  ${oldbuilddir}dkim-milter/${dkimver}
+			mv ${dkimbuilddir} `mktemp -ud ${oldbuilddir}dkim-milter/${dkimver}/XXX` >> $dkimlog 2>&1
 		fi && \
-		mkdir -p ${dkimmilterbuilddir}/bin >> $dkimmilterlog 2>&1 &&
-		mkdir -p ${dkimmilterbuilddir}/man >> $dkimmilterlog 2>&1 &&
-		mkdir -p ${dkimmilterbuilddir}/man/man5 >> $dkimmilterlog 2>&1 &&
-		mkdir -p ${dkimmilterbuilddir}/man/man8 >> $dkimmilterlog 2>&1 &&
-		cd `cd dkim-filter && ./Build -M && cd $OLDPWD` && make install >> $dkimmilterlog 2>&1 || exit
-	if [ $dkimmiltersym = "1" ]
+		mkdir -p ${dkimbuilddir}/bin >> $dkimlog 2>&1 &&
+		mkdir -p ${dkimbuilddir}/man >> $dkimlog 2>&1 &&
+		mkdir -p ${dkimbuilddir}/man/man5 >> $dkimlog 2>&1 &&
+		mkdir -p ${dkimbuilddir}/man/man8 >> $dkimlog 2>&1 &&
+		cd `cd dkim-filter && ./Build -M && cd $OLDPWD` && make install >> $dkimlog 2>&1 || exit
+	if [ $dkimsym = "1" ]
 	then
 		cd ${builddir}
 			rm -f dkim-milter
-			ln -s main/dkim-milter/${dkimmilterver} dkim-milter
+			ln -s main/dkim-milter/${dkimver} dkim-milter
 		cd $OLDPWD
 	fi
-	echo "DONE" | tee -a $dkimmilterlog
-	echo "DONE BUILD dkim-milter-${dkimmilterver}" | tee -a $dkimmilterlog
+	echo "DONE" | tee -a $dkimlog
+	echo "DONE BUILD dkim-milter-${dkimver}" | tee -a $dkimlog
+fi
+
+if [ $dkimconf = "1" -a ! -e ${datadir}dkim ]
+then
+	echo -n "Configure dkim-milter..." | tee -a $dkimlog
+	export dkimdatadir=${datadir}dkim/
+	mkdir -p ${dkimdatadir}
+	mkdir -p ${dkimdatadir}conf
+	mkdir -p ${dkimdatadir}key
+	export rundir=${datadir}run/
+	export dkimbuilddir=${builddir}dkim-milter/
+	${scriptdir}/conf/dkim/init.d.sh > ${dkimdatadir}init.d
+	${scriptdir}/conf/dkim/dkim.conf.sh > ${dkimdatadir}conf/dkim.conf
+	chmod 755 ${datadir}dkim/init.d
+	echo "DONE" | tee -a $dkimlog
 fi
 
 exit 0
