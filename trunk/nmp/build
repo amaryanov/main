@@ -43,7 +43,7 @@ phpreb=0
 subversionreb=0
 rsyncreb=0
 postfixreb=0
-dkimreb=0
+dkimreb=1
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -352,7 +352,8 @@ then
 	echo "DONE BUILD zlib-"${zlibver} | tee -a $zliblog
 fi
 #openssl
-if [ $phpbuild = "1" -o $phpreb = "1" -o $subversionbuild = "1" -o $subversionreb = "1" ] \
+if [ $phpbuild = "1" -o $phpreb = "1" -o $subversionbuild = "1" \
+		-o $subversionreb = "1" -o $dkimbuild = "1" -o $dkimreb = "1" ] \
 	&& [ ! -e ${builddir}other/openssl/${opsslver} -o $opsslreb = "1" ] \
 	|| [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
@@ -373,7 +374,8 @@ then
 		echo "DONE" | tee -a $openssllog
 	fi
 
-	if [ $phpbuild = "1" -o $phpreb = "1" -o $subversionbuild = "1" -o $subversionreb = "1" ] \
+	if [ $phpbuild = "1" -o $phpreb = "1" -o $subversionbuild = "1" -o $subversionreb = "1"\
+			-o $dkimbuild = "1" -o $dkimreb = "1" ] \
 		&& [ ! -e ${builddir}other/openssl/${opsslver} -o $opsslreb = "1" ]
 	then
 		echo -n "Make openssl-${opsslver}..." | tee -a $openssllog
@@ -1484,7 +1486,7 @@ then
 	cd dkim-milter-${dkimver}/
 		cat > devtools/Site/site.config.m4 << EOF &&
 		APPENDDEF(\`bld_dkim_filter_INCDIRS', \`-I${srcdir}sendmail-${sendmailver}/include')
-		APPENDDEF(\`bld_dkim_filter_LIBDIRS', \`-L${libmilterbuilddir}')
+		APPENDDEF(\`bld_dkim_filter_LIBDIRS', \`-L${libmilterbuilddir} -L${builddir}other/openssl/${opsslver}/lib')
 		define(\`confEBINDIR', \`${dkimbuilddir}bin/')
 		define(\`confUBINDIR', \`${dkimbuilddir}bin/')
 		define(\`confINSTALL', \`\${BUILDBIN}/install.sh')
@@ -1493,6 +1495,7 @@ then
 		define(\`confMANROOT', \`${dkimbuilddir}man/man')
 		define(\`confMANGRP',\`""')
 		define(\`confMANOWN',\`""')
+		define(\`confLDOPTS',\`-Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib')
 EOF
 		./Build >> $dkimlog 2>&1 && \
 		if [ -e ${dkimbuilddir} ]
