@@ -88,14 +88,14 @@ endsIfNot()
 
 echo "Parse paramenters..."
 counter=1
+varpattern='\([^=]*\)\(=\(.*\)\)\{0,1\}'
 while [ "$counter" -le "$#" ]
 do
 	var=`eval echo '$'$counter`
-	assignpos=`expr index $var "="`
-	if [ $assignpos != "0" ]
+	varname=`echo $var | sed 's/'$varpattern'/\1/'`
+	if [ "$varname" != "$var" ]
 	then
-		varname=`echo $var | sed 's/\([^=]*\)=\(.*\)/\1/'`
-		varval=`echo $var | sed 's/\([^=]*\)=\(.*\)/\2/'`
+		varval=`echo $var | sed 's/'$varpattern'/\3/'`
 		eval $varname='$varval' 2>/dev/null
 	else
 		eval $var='1' 2>/dev/null
@@ -253,7 +253,7 @@ fi
 endIfNot 0 $? "Rsync error."
 echo "DONE"
 
-logs=`find $slavedir/masterlog/ -size +0 -type f -printf "%f\n" | sort`
+logs=`find $slavedir/masterlog/ -size +0 -type f -exec basename {} \; | sort`
 if [ "x$logs" != "x" ]
 then
 	startslave
@@ -305,10 +305,10 @@ then
 	while test $try -gt 0 ; do
 		echo -n "$try "
 		fl=`find $slavedir/data/db/ -type f -mmin -$mins | grep -v db\.opt | \
-			sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//' | sort | uniq`
+			sed 's/.*\/\([^\/]\{1,\}\)\/\([^\/]\{1,\}\)$/\1.\2/' | sed 's/\.[^\.]\{1,\}$//' | sort | uniq`
 		if [ "x$fl" != "x" ]
 		then
-			echo -n "\nChanged tables: $fl"
+			printf "\nChanged tables: $fl\n"
 			break
 		fi
 		try=`expr $try - 1`
@@ -340,18 +340,19 @@ then
 	fi
 
 	echo -n "Check deleted databases tables..."
-	svndb=`find $slavedir/dumps -mindepth 1 -type d | grep -v svn | sed 's/.*\/\([^\/]\+\)/\1/'`
-	svntbl=`find $slavedir/dumps -mindepth 1 -type f | grep -v svn | sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//'`
-	dbtbl=`find $slavedir/data/db -type f | grep -v db\.opt | sed 's/.*\/\([^\/]\+\)\/\([^\/]\+\)$/\1.\2/' | sed 's/\.[^\.]\+$//' | sort | uniq`
-	dbdb=`find $slavedir/data/db -mindepth 1 -type d | grep -v db\.opt | sed 's/.*\/\([^\/]\+\)/\1/'`
-	alltbldb=`echo "$svndb\n$svntbl\n$dbtbl\n$dbdb" | sort | uniq`
-	tbldel=`echo "$alltbldb\n$dbtbl\n$dbdb" | sort | uniq -u`
+	svndb=`find $slavedir/dumps -mindepth 1 -type d | grep -v svn | sed 's/.*\/\([^\/]\{1,\}\)/\1/'`
+	svntbl=`find $slavedir/dumps -mindepth 1 -type f | grep -v svn | sed 's/.*\/\([^\/]\{1,\}\)\/\([^\/]\{1,\}\)$/\1.\2/' | sed 's/\.[^\.]\{1,\}$//'`
+	dbtbl=`find $slavedir/data/db -type f | grep -v db\.opt | sed 's/.*\/\([^\/]\{1,\}\)\/\([^\/]\{1,\}\)$/\1.\2/' | sed 's/\.[^\.]\{1,\}$//' | sort | uniq`
+	dbdb=`find $slavedir/data/db -mindepth 1 -type d | grep -v db\.opt | sed 's/.*\/\([^\/]\{1,\}\)/\1/'`
+	alltbldb=`printf "$svndb\n$svntbl\n$dbtbl\n$dbdb" | sort | uniq`
+	tbldel=`printf "$alltbldb\n$dbtbl\n$dbdb" | sort | uniq -u`
+	dbpattern='\([^\.]*\)\(\.\(.*\)\)\?'
 	for tbl in $tbldel
 	do
 		if [ "x$tbldel" != "x" ]
 		then
-			table=`echo $tbl | sed 's/\([^\.]*\)\(\.\(.*\)\)\?/\3/'`
-			db=`echo $tbl | sed 's/\([^\.]*\)\(\.\(.*\)\)\?/\1/'`
+			table=`echo $tbl | sed 's/'$dbpattern'/\3/'`
+			db=`echo $tbl | sed 's/'$dbpattern'/\1/'`
 			echo "Remove $tbldel"
 			if [ "x$table" != "x" ]
 			then
@@ -373,21 +374,24 @@ then
 		fi
 	done
 	echo 'DONE'
-	if [ "$commitdump" = "1" -a "x`$svn st $slavedir/dumps`" != "x" ]
+	if [ "$commitdump" = "1" ]
 	then
-		echo -n "Commit changed tables..."
-		for file in `$svn st $slavedir/dumps | grep "^?" | sed 's/\? *//'`
-		do
-			$svn add $file
-		done
-		$svn ci $slavedir/dumps -m "Incremental dump of tables from `date +'%Y-%m-%d %k:%M:%S%:::z'`"
-		endsIfNot 0 $? "Cant commit changed tables"
-
-		if [ "$commitdump" = "1" ]
+		if [ "x`$svn st $slavedir/dumps`" != "x" ]
 		then
-			$svn up $slavedir/dumps
+			echo -n "Commit changed tables..."
+			for file in `$svn st $slavedir/dumps | grep "^?" | sed 's/\? *//'`
+			do
+				$svn add $file
+			done
+			$svn ci $slavedir/dumps -m "Incremental dump of tables from `date +'%Y-%m-%d %k:%M:%S%:::z'`"
+			endsIfNot 0 $? "Cant commit changed tables"
+
+			if [ "$commitdump" = "1" ]
+			then
+				$svn up $slavedir/dumps
+			fi
+			echo "DONE"
 		fi
-		echo "DONE"
 	fi
 	echo "Done making dumps for changed tables"
 fi
