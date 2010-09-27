@@ -59,7 +59,7 @@ case "\$1" in
 		failedIfNot 0 \$? " is not running"
 		kill -s TERM \`cat \$pid\`
 		failedIfNot 0 \$? " failed"
-		rm \$pid \$sock
+		rm -f \$pid \$sock
 		echo " done"
 	;;
 
