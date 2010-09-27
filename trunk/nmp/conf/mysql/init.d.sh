@@ -85,7 +85,7 @@ case "\$1" in
 
 		\$mysqladmin \$opts -v shutdown
 
-		if [ "$?" != 0 ] ; then
+		if [ "\$?" != 0 ] ; then
 			echo " failed"
 			exit 1
 		fi
