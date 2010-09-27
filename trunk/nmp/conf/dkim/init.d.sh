@@ -20,11 +20,19 @@ conf=${dkimdatadir}conf/dkim.conf
 pid=${rundir}dkim.pid
 sock=${rundir}dkim.sock
 
-iffailed()
+failedIfNot()
 {
-	if [ "\$?" != "\$1" ]
+	if [ "\$1" != "\$2" ]
 	then
-		echo " \$2"
+		echo " \$3"
+		exit 1
+	fi
+}
+failedIf()
+{
+	if [ "\$1" = "\$2" ]
+	then
+		echo " \$3"
 		exit 1
 	fi
 }
@@ -35,33 +43,23 @@ case "\$1" in
 		ls \$pid 2>/dev/null 1>&2
 		if [ \$? = "0" ]
 		then
-			ps -p \`cat \$pid\` -o pid h >/dev/null
-			iffailed 1 " already running"
+			ps -p \`cat \$pid\` -o pid >/dev/null
+			failedIf 0 \$? " already running"
 		fi
 		\$dkimmilter -x \$conf
-		iffailed 0 " failed"
+		failedIfNot 0 \$? " failed"
 		echo " done"
 	;;
 
 	stop)
 		echo -n "Stoping dkim-milter "
 		ls \$pid 2>/dev/null 1>&2
-		iffailed 0 " pid file does not exist"
-		ps -p \`cat \$pid\` -o pid h >/dev/null
-		iffailed 0 " is not running"
+		failedIfNot 0 \$? " pid file does not exist"
+		ps -p \`cat \$pid\` -o pid >/dev/null
+		failedIfNot 0 \$? " is not running"
 		kill -s TERM \`cat \$pid\`
-		iffailed 0 " failed"
+		failedIfNot 0 \$? " failed"
 		rm \$pid \$sock
-		echo " done"
-	;;
-	reload)
-		echo -n "Stoping dkim-milter "
-		ls \$pid 2>/dev/null 1>&2
-		iffailed 0 " pid file does not exist"
-		ps -p \`cat \$pid\` -o pid h >/dev/null
-		iffailed 0 " is not running"
-		kill -s USR1 \`cat \$pid\`
-		iffailed 0 " failed"
 		echo " done"
 	;;
 
