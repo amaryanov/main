@@ -17,11 +17,20 @@ cat << EOF
 ### END INIT INFO
 postfix=${postfixbuilddir}bin/postfix
 
-iffailed()
+failIfNot()
 {
-	if [ "\$?" != "\$1" ]
+	if [ "\$1" != "\$2" ]
 	then
-		echo " \$2"
+		echo " \$3"
+		exit 1
+	fi
+}
+
+failIf()
+{
+	if [ "\$1" = "\$2" ]
+	then
+		echo " \$3"
 		exit 1
 	fi
 }
@@ -30,18 +39,18 @@ case "\$1" in
 	start)
 		echo -n "Starting postfix "
 		\$postfix status
-		iffailed 1 " already running"
+		failIf 0 \$? " already running"
 		\$postfix start
-		iffailed 0 " failed"
+		failIfNot 0 \$? " failed"
 		echo " done"
 	;;
 
 	stop)
 		echo -n "Stoping postfix "
 		\$postfix status
-		iffailed 0 " is not running"
+		failIfNot 0 \$? " is not running"
 		\$postfix stop
-		iffailed 0 " failed"
+		failIfNot 0 \$? " failed"
 		echo " done"
 	;;
 
