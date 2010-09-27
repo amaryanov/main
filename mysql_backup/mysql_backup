@@ -42,7 +42,7 @@ startslave()
 {
 	echo -n "Start slave..."
 	$slavedir/init.d start
-	endsif "Cant start slave"
+	endsIfNot 0 $? "Cant start slave"
 	slavestarted=1
 	echo "DONE"
 }
@@ -68,26 +68,21 @@ end()
 	exit 1
 }
 
-endif()
+endIfNot()
 {
-	if [ $? != "0" ]
+	if [ "$1" != "$2" ]
 	then
-		end "$1 (exit status $?)"
+		end "$3 (exit status $2)"
 	fi
 }
 
-ends()
+endsIfNot()
 {
-	echo "$1 (exit status $?) Terminating without removing semaphore directory."
-	stopslave
-	exit 1
-}
-
-endsif()
-{
-	if [ $? != "0" ]
+	if [ "$1" != "$2" ]
 	then
-		ends "$1"
+		echo "$3 (exit status $2) Terminating without removing semaphore directory."
+		stopslave
+		exit 1
 	fi
 }
 
@@ -121,11 +116,8 @@ fi
 echo -n "Try to create directory-semaphore..."
 mastersyncdir="$slavedir/log/mastersync"
 mkdir $mastersyncdir
-if [ "$?" != "0" ]
-then
-	end "Cant create $mastersyncdir. May be another instance of this script already running,"\
-		" or previous terminated without removing semaphore directory."
-fi
+endIfNot 0 $? "Cant create $mastersyncdir. May be another instance of this script already running,"\
+	" or previous terminated without removing semaphore directory."
 lockdircreated=1
 echo "DONE"
 
@@ -230,7 +222,7 @@ then
 	else
 		$flushlogscmd
 	fi
-	endif "Cant flush master logs."
+	endIfNot 0 $? "Cant flush master logs."
 	echo "DONE"
 fi
 
@@ -243,7 +235,7 @@ then
 	lastlogcmd="$ssh $host $lastlogcmd"
 fi
 lastlog="`eval $lastlogcmd`"
-endif "Cant get current master binary log file name"
+endIfNot 0 $? "Cant get current master binary log file name"
 echo $lastlog
 
 echo -n "Run rsync..."
@@ -258,7 +250,7 @@ then
 else
 	$rsync $rsyncopt $masterdir/log/bin/ $slavedir/masterlog/
 fi
-endif "Rsync error($?)."
+endIfNot 0 $? "Rsync error."
 echo "DONE"
 
 logs=`find $slavedir/masterlog/ -size +0 -type f -printf "%f\n" | sort`
@@ -276,17 +268,17 @@ then
 		sqlfile="$slavedir/sql/$file.sql"
 		echo -n "Create dump from $logfile..."
 		$mysqlbinlog $mysqlbinlogopts $logfile > $sqlfile
-		endsif "Cant create dump from $file"
+		endsIfNot 0 $? "Cant create dump from $file"
 		echo "DONE"
 		echo -n "Import $sqlfile..."
 		$mysql $mysqlslaveopts < $sqlfile
-		endsif "Cant import $sqlfile"
+		endsIfNot 0 $? "Cant import $sqlfile"
 		echo "DONE"
 		if [ "$backupmasterlog" = "1" ]
 		then
 			echo -n "Backup $logfile..."
 			cp $logfile $slavedir/masterlogbackup/
-			endsif "Cant backup $logfile"
+			endsIfNot 0 $? "Cant backup $logfile"
 			echo "DONE"
 		fi
 		echo -n > $logfile
@@ -303,7 +295,7 @@ then
 	echo "Start making dumps for changed tables"
 	echo -n "Try to flush and lock tables on slave..."
 	$mysql $mysqlslaveopts -e "FLUSH TABLES WITH READ LOCK"
-	endsif "Cant flush tables."
+	endsIfNot 0 $? "Cant flush tables."
 	echo "DONE"
 	stoptime=`date +%s`
 	mins="`expr \( $stoptime - $starttime \) / 60 + 1`"
@@ -330,11 +322,11 @@ then
 		if [ ! -e $slavedir/dumps/$dbname/ ]
 		then
 			mkdir $slavedir/dumps/$dbname/
-			endsif "Cand create directory $slavedir/dumps/$dbname/"
+			endsIfNot 0 $? "Cand create directory $slavedir/dumps/$dbname/"
 		fi
 		echo -n "Make dump for $dbname.$table ..."
 		$mysqldump $dumpopts $dbname $table > $slavedir/dumps/$dbname/$table.sql
-		endsif "Cant create dump for $dbname.$table"
+		endsIfNot 0 $? "Cant create dump for $dbname.$table"
 		echo "DONE"
 	done
 	echo -n 'Unlock tables...'
@@ -344,7 +336,7 @@ then
 	if [ "$commitdump" = "1" ]
 	then
 		$svn up $slavedir/dumps
-		endsif "Cant update svn"
+		endsIfNot 0 $? "Cant update svn"
 	fi
 
 	echo -n "Check deleted databases tables..."
@@ -377,7 +369,7 @@ then
 					rm -r $slavedir/dumps/$db
 				fi
 			fi
-			endsif "Cant delete"
+			endsIfNot 0 $? "Cant delete"
 		fi
 	done
 	echo 'DONE'
@@ -389,7 +381,7 @@ then
 			$svn add $file
 		done
 		$svn ci $slavedir/dumps -m "Incremental dump of tables from `date +'%Y-%m-%d %k:%M:%S%:::z'`"
-		endsif "Cant commit changed tables"
+		endsIfNot 0 $? "Cant commit changed tables"
 
 		if [ "$commitdump" = "1" ]
 		then
