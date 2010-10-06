@@ -4,6 +4,10 @@ cat << EOF
 #! /bin/sh
 # MySQL daemon start/stop script.
 
+# PROVIDE: mysql
+# BEFORE:  LOGIN
+# KEYWORD: nojail shutdown
+
 # Usually this is put in /etc/init.d (at least on machines SYSV R4 based
 # systems) and linked to /etc/rc3.d/S99mysql and /etc/rc0.d/K01mysql.
 ### BEGIN INIT INFO

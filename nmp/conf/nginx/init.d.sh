@@ -4,6 +4,10 @@ cat << EOF
 #! /bin/sh
 # nginx daemon start/stop script.
 
+# PROVIDE: nginx
+# BEFORE:  LOGIN
+# KEYWORD: nojail shutdown
+
 # Usually this is put in /etc/init.d (at least on machines SYSV R4 based
 # systems) and linked to /etc/rc3.d/S99nginx and /etc/rc0.d/K01nginx.
 ### BEGIN INIT INFO

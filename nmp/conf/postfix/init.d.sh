@@ -4,6 +4,10 @@ cat << EOF
 #!/bin/sh
 # postfix daemon start/stop script.
 
+# PROVIDE: postfix
+# BEFORE:  LOGIN
+# KEYWORD: nojail shutdown
+
 # Usually this is put in /etc/init.d (at least on machines SYSV R4 based
 # systems) and linked to /etc/rc3.d/S99postfix and /etc/rc0.d/K01postfix.
 ### BEGIN INIT INFO
