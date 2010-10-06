@@ -2,6 +2,11 @@
 
 cat << EOF
 #! /bin/sh
+
+# PROVIDE: php
+# BEFORE:  LOGIN
+# KEYWORD: nojail shutdown
+
 ### BEGIN INIT INFO
 # Provides:          php-fpm
 # Required-Start:    \$all

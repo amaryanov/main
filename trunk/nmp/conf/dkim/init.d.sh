@@ -4,6 +4,10 @@ cat << EOF
 #!/bin/sh
 # dkim-milter daemon start/stop script.
 
+# PROVIDE: dkim-milter
+# BEFORE:  LOGIN
+# KEYWORD: nojail shutdown
+
 # Usually this is put in /etc/init.d (at least on machines SYSV R4 based
 # systems) and linked to /etc/rc3.d/S99dkim-milter and /etc/rc0.d/K01dkim-milter.
 ### BEGIN INIT INFO
