@@ -21,7 +21,7 @@ sub getHeader
 		}
 		else
 		{
-			$header =~ /(^|;)\s*\Q${hedaer_partnum}\E=((\x22|\x27)?)([^;]+)(\2)/;
+			$header =~ /(^|;)\s*\Q${header_partnum}\E=((\x22|\x27)?)([^;]+)(\2)/;
 			$header = $4;
 		}
 	}
@@ -64,6 +64,20 @@ sub myexit
 	exit $_[0];
 }
 
+sub getReports
+{
+	my $dsn_part = $_[0];
+	my @subparts = ();
+	foreach $subpart (split("\n\n", $dsn_part))
+	{
+		if ( getHeader($subpart, "final-recipient") ne "" )
+		{
+			push @subparts, $subpart;
+		}
+	}
+	return @subparts;
+}
+
 sub getEmail
 {
 	$_[0] =~ /([^@\s<,;]+@[^>\s,;]+)/;
@@ -74,7 +88,7 @@ my @message_parts = splitMessage($message);
 $report_type = getHeader($message, "content-type", "report-type");
 if ( $report_type ne "delivery-status" )
 {
-	myexit($exit_codes{"DATAERR"}, "Looks like it is not delivery status report.");
+	myexit($exit_codes{"DATAERR"}, "Looks like it does not have delivery status report.");
 }
 
 my $dsnPart = findByContentType(\@message_parts, "message/delivery-status");
@@ -93,23 +107,33 @@ if ( $messagePart == -1 )
 	myexit($exit_codes{"DATAERR"}, "Cant find source message or source message headers.");
 }
 
-my $action =  getHeader($message_parts[$dsnPart], "action");
-if ( $action eq "")
-{
-	myexit($exit_codes{"DATAERR"}, "Cant find action.");
-}
-
 my $listId = getHeader($message_parts[$messagePart], "x-list-id");
 if ( $listId !~ /^\d+$/ )
 {
 	myexit($exit_codes{"DATAERR"}, "Cant find maillist id.");
 }
 
-my $to = getHeader($message_parts[$messagePart], "to");
-if ( $to eq "" )
+my @reports = getReports($message_parts[$dsnPart]);
+if ( @reports == 0)
 {
-	myexit($exit_codes{"DATAERR"}, "Cant find \"To:\" header.");
+	myexit($exit_codes{"DATAERR"}, "Cant find reports.");
 }
-print $to."\n";
+
+foreach $report (@reports)
+{
+	my $action = getHeader($report, "action");
+	if ( $action eq "" )
+	{
+		print "Cant find action in report:" . $report."\n";
+		next;
+	}
+	my $recipient = getHeader($report, "final-recipient", "1");
+	if ( $recipient eq "" )
+	{
+		print "Cant find recipient in report:" . $report."\n";
+		next;
+	}
+	print "$recipient $action\n";
+}
 
 myexit($exit_codes{"OK"}, "Done successfully");
