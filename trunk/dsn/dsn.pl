@@ -105,13 +105,18 @@ sub updateStatus
 {
 	my ($recipient, $list_id, $status, $auth_hash, $report) = @_;
 	$report = mysql_escape($report);
+	my $set_auth  = "";
+	if ( $db_statuses{"DELIVERED"} == $status )
+	{
+		$set_auth = "s.auth_hash='$auth_hash',";
+	}
 	my $query = "
 		update
 			subscriptions s,
 			users u
 		set
 			s.status='$status',
-			s.auth_hash='$auth_hash',
+			$set_auth
 			s.report='$report'
 		where
 			u.email='$recipient'
@@ -123,6 +128,7 @@ sub updateStatus
 	{
 		$cmd .= " > $tempfile 2>&1";
 	}
+	print $cmd;
 	system($cmd);
 	if ( $? != 0 )
 	{
