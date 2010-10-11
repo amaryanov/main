@@ -3,6 +3,7 @@
 my $mysql = "/home/www/server/build/mysql/bin/mysql";
 my $mysqlconf = "/home/www/server/data/mysql/conf/client.cnf";
 my $db = "cifrograd_mailer";
+my $tmp_mysql_log = "/tmp/message-mysql-XXXX";
 
 
 my $message = do {local (@ARGV,$/); <STDIN>};
@@ -122,7 +123,7 @@ sub updateStatus
 			u.email='$recipient'
 			and s.user_id=u.id
 			and s.maillist_id='$list_id'";
-	my $tempfile = trim(`mktemp /tmp/message-mysql-XXXX`);
+	my $tempfile = trim(`mktemp $tmp_mysql_log`);
 	my $cmd = "$mysql --defaults-file=$mysqlconf -D $db -e \"$query\"";
 	if ( length($tempfile) > 0 )
 	{
