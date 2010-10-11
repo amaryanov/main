@@ -129,7 +129,6 @@ sub updateStatus
 	{
 		$cmd .= " > $tempfile 2>&1";
 	}
-	print $cmd;
 	system($cmd);
 	if ( $? != 0 )
 	{
