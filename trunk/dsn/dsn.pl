@@ -1,7 +1,18 @@
 #!/usr/bin/perl
 
+my $mysql = "/home/www/server/build/mysql/bin/mysql";
+my $mysqlconf = "/home/www/server/data/mysql/conf/client.cnf";
+my $db = "cifrograd_mailer";
+
+
 my $message = do {local (@ARGV,$/); <STDIN>};
 %exit_codes = ("OK", 0, "DATAERR", 65, "TERM", 1);
+%db_statuses = ("DELIVERED", "2", "UNDELIVERED", "3");
+%statuses = ("failed", $db_statuses{"UNDELIVERED"},
+	"delayed", $db_statuses{"UNDELIVERED"},
+	"delivered", $db_statuses{"DELIVERED"},
+	"relayed", $db_statuses{"DELIVERED"}, 
+	"expanded", $db_statuses{"DELIVERED"});
 
 
 sub getHeader
@@ -32,6 +43,7 @@ sub getHeader
 sub trim
 {
 	$_[0] =~ s/(\A\s+)|(\s+\z)//g;
+	return $_[0];
 }
 
 sub splitMessage
@@ -39,7 +51,12 @@ sub splitMessage
 	my $message = $_[0];
 	my $boundary = getHeader($message, "content-type", "boundary");
 	$message =~ s/--\Q$boundary\E--//;
-	return split(/--\Q$boundary\E/ms, $message);
+	my @parts = ();
+	foreach $part (split(/--\Q$boundary\E/ms, $message))
+	{
+		push @parts, trim($part);
+	}
+	return @parts;
 }
 
 sub findByContentType
@@ -77,10 +94,55 @@ sub getReports
 	}
 	return @subparts;
 }
-
-sub getEmail
+sub mysql_escape
 {
-	$_[0] =~ /([^@\s<,;]+@[^>\s,;]+)/;
+	#\x00, \n, \r, \, ', " and \x1a
+	$_[0] =~ s/([\x00\n\r\\\x22\x27\x1a])/\\\1/g;
+	return $_[0];
+}
+
+sub updateStatus
+{
+	my ($recipient, $listId, $status, $report) = @_;
+	$report = mysql_escape($report);
+	my $query = "
+		update
+			subscriptions s,
+			users u
+		set
+			s.status='$status',
+			s.report='$report'
+		where
+			u.email='$recipient'
+			and s.user_id=u.id
+			and s.maillist_id='$listId'";
+	my $tempfile = trim(`mktemp /tmp/message-mysql-XXXX`);
+	my $cmd = "$mysql --defaults-file=$mysqlconf -D $db -e \"$query\"";
+	if ( length($tempfile) > 0 )
+	{
+		$cmd .= " > $tempfile 2>&1";
+	}
+	system($cmd);
+	if ( $? != 0 )
+	{
+		local $/=undef;
+		my $string = "";
+		if ( open FILE, $tempfile)
+		{
+			binmode FILE;
+			$string = <FILE>;
+			close FILE;
+		}
+		else
+		{
+			$string = `cat $tempfile`;
+		}
+		print "Cant set status: $cmd \n $string";
+	}
+	if ( length($tempfile) > 0 )
+	{
+		unlink($tempfile);
+	}
 }
 
 my @message_parts = splitMessage($message);
@@ -127,13 +189,19 @@ foreach $report (@reports)
 		print "Cant find action in report:" . $report."\n";
 		next;
 	}
+	my $db_action = $statuses{$action};
+	if ( $db_action eq "" )
+	{
+		print "Unknown action in report:" . $report."\n";
+		next;
+	}
 	my $recipient = getHeader($report, "final-recipient", "1");
 	if ( $recipient eq "" )
 	{
 		print "Cant find recipient in report:" . $report."\n";
 		next;
 	}
-	print "$recipient $action\n";
+	updateStatus($recipient, $listId, $db_action, $report);
 }
 
 myexit($exit_codes{"OK"}, "Done successfully");
