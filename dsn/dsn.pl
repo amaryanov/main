@@ -103,7 +103,7 @@ sub mysql_escape
 
 sub updateStatus
 {
-	my ($recipient, $listId, $status, $report) = @_;
+	my ($recipient, $list_id, $status, $auth_hash, $report) = @_;
 	$report = mysql_escape($report);
 	my $query = "
 		update
@@ -111,11 +111,12 @@ sub updateStatus
 			users u
 		set
 			s.status='$status',
+			s.auth_hash='$auth_hash',
 			s.report='$report'
 		where
 			u.email='$recipient'
 			and s.user_id=u.id
-			and s.maillist_id='$listId'";
+			and s.maillist_id='$list_id'";
 	my $tempfile = trim(`mktemp /tmp/message-mysql-XXXX`);
 	my $cmd = "$mysql --defaults-file=$mysqlconf -D $db -e \"$query\"";
 	if ( length($tempfile) > 0 )
@@ -169,10 +170,17 @@ if ( $messagePart == -1 )
 	myexit($exit_codes{"DATAERR"}, "Cant find source message or source message headers.");
 }
 
-my $listId = getHeader($message_parts[$messagePart], "x-list-id");
-if ( $listId !~ /^\d+$/ )
+my $unsubscribeLink = getHeader($message_parts[$messagePart], "list-unsubscribe");
+$unsubscribeLink =~ /unsubscribe\/([a-z0-9]{64})(\d+)/;
+my $unsubscribeHash = $1;
+my $list_id = $2;
+if ( $list_id !~ /^\d+$/ )
 {
-	myexit($exit_codes{"DATAERR"}, "Cant find maillist id.");
+	myexit($exit_codes{"DATAERR"}, "Cant find list id.");
+}
+if ( $unsubscribeHash !~ /^[a-z0-9]+$/ )
+{
+	myexit($exit_codes{"DATAERR"}, "Cant find unsubscribe hash.");
 }
 
 my @reports = getReports($message_parts[$dsnPart]);
@@ -201,7 +209,7 @@ foreach $report (@reports)
 		print "Cant find recipient in report:" . $report."\n";
 		next;
 	}
-	updateStatus($recipient, $listId, $db_action, $report);
+	updateStatus($recipient, $list_id, $db_action, $unsubscribeHash, $report);
 }
 
 myexit($exit_codes{"OK"}, "Done successfully");
