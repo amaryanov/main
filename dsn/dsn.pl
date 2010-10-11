@@ -4,10 +4,11 @@ my $mysql = "/home/www/server/build/mysql/bin/mysql";
 my $mysqlconf = "/home/www/server/data/mysql/conf/client.cnf";
 my $db = "cifrograd_mailer";
 my $tmp_mysql_log = "/tmp/message-mysql-XXXX";
+my $logfile = "/tmp/dsn.log";
 
-
+my $logid = int(rand(1000000000));
 my $message = do {local (@ARGV,$/); <STDIN>};
-%exit_codes = ("OK", 0, "DATAERR", 65, "TERM", 1);
+%exit_codes = ("OK", 0, "DATAERR", 65, "TERM", 1, "INFO", 99, "WARN", 98);
 %db_statuses = ("DELIVERED", "2", "UNDELIVERED", "3");
 %statuses = ("failed", $db_statuses{"UNDELIVERED"},
 	"delayed", $db_statuses{"UNDELIVERED"},
@@ -15,6 +16,7 @@ my $message = do {local (@ARGV,$/); <STDIN>};
 	"relayed", $db_statuses{"DELIVERED"}, 
 	"expanded", $db_statuses{"DELIVERED"});
 
+writeLog("INFO", "Start processing message " . getHeader($message, "message-id"));
 
 sub getHeader
 {
@@ -78,8 +80,31 @@ sub findByContentType
 
 sub myexit
 {
-	print $_[1]."\n";
-	exit $_[0];
+	writeLog($_[0], $_[1]);
+	exit $exit_codes{$_[0]};
+}
+
+sub writeLog
+{
+	my($type, $message) = @_;
+
+	if ( open(LOG, ">>$logfile") )
+	{
+		flock(LOG, LOCK_EX);
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+		$message =~ s/([^\n]{50,70})(?:\b\s*|\n)/$1\n/gi;
+		while ( $message =~ m/([^\n]{71})/ )
+		{
+			$message =~ s/([^\n]{70})([^\n])/$1\n$2/g;
+		}
+		$message =~ s/(\n|\n\r)/\n\t/g;
+		print LOG "[$hour:$min:$sec $mday.$mon.$year] ($logid) <$type> $message\n" ; 
+		close(LOG);
+	}
+	else
+	{
+		myexit("DATAERR", "Cant open log file.");
+	}
 }
 
 sub getReports
@@ -129,6 +154,7 @@ sub updateStatus
 	{
 		$cmd .= " > $tempfile 2>&1";
 	}
+	writeLog("INFO", "Update status: $cmd");
 	system($cmd);
 	if ( $? != 0 )
 	{
@@ -144,7 +170,7 @@ sub updateStatus
 		{
 			$string = `cat $tempfile`;
 		}
-		print "Cant set status: $cmd \n $string";
+		writeLog("WARN", "Cant set status: $cmd \n $string");
 	}
 	elsif ( length($tempfile) > 0 )
 	{
@@ -152,18 +178,20 @@ sub updateStatus
 	}
 }
 
+writeLog("INFO", "Split message");
 my @message_parts = splitMessage($message);
+writeLog("INFO", "Done split message");
 
 $report_type = getHeader($message, "content-type", "report-type");
 if ( $report_type ne "delivery-status" )
 {
-	myexit($exit_codes{"DATAERR"}, "Looks like it does not have delivery status report.");
+	myexit("DATAERR", "Looks like it does not have delivery status report.");
 }
 
 my $dsnPart = findByContentType(\@message_parts, "message/delivery-status");
 if ( $dsnPart == -1 )
 {
-	myexit($exit_codes{"DATAERR"}, "Cant find delivery status message part.");
+	myexit("DATAERR", "Cant find delivery status message part.");
 }
 
 my $messagePart = findByContentType(\@message_parts, "message/rfc822");
@@ -173,7 +201,7 @@ if ( $messagePart == -1 )
 }
 if ( $messagePart == -1 )
 {
-	myexit($exit_codes{"DATAERR"}, "Cant find source message or source message headers.");
+	myexit("DATAERR", "Cant find source message or source message headers.");
 }
 
 my $unsubscribeLink = getHeader($message_parts[$messagePart], "list-unsubscribe");
@@ -182,17 +210,17 @@ my $unsubscribeHash = $1;
 my $list_id = $2;
 if ( $list_id !~ /^\d+$/ )
 {
-	myexit($exit_codes{"DATAERR"}, "Cant find list id.");
+	myexit("DATAERR", "Cant find list id.");
 }
 if ( $unsubscribeHash !~ /^[a-z0-9]+$/ )
 {
-	myexit($exit_codes{"DATAERR"}, "Cant find unsubscribe hash.");
+	myexit("DATAERR", "Cant find unsubscribe hash.");
 }
 
 my @reports = getReports($message_parts[$dsnPart]);
 if ( @reports == 0)
 {
-	myexit($exit_codes{"DATAERR"}, "Cant find reports.");
+	myexit("DATAERR", "Cant find reports.");
 }
 
 foreach $report (@reports)
@@ -200,22 +228,22 @@ foreach $report (@reports)
 	my $action = getHeader($report, "action");
 	if ( $action eq "" )
 	{
-		print "Cant find action in report:" . $report."\n";
+		writeLog("WARN", "Cant find action in report:" . $report);
 		next;
 	}
 	my $db_action = $statuses{$action};
 	if ( $db_action eq "" )
 	{
-		print "Unknown action in report:" . $report."\n";
+		writeLog("WARN", "Unknown action in report:" . $report);
 		next;
 	}
 	my $recipient = getHeader($report, "final-recipient", "1");
 	if ( $recipient eq "" )
 	{
-		print "Cant find recipient in report:" . $report."\n";
+		writeLog("WARN", "Cant find recipient in report:" . $report);
 		next;
 	}
 	updateStatus($recipient, $list_id, $db_action, $unsubscribeHash, $report);
 }
 
-myexit($exit_codes{"OK"}, "Done successfully");
+myexit("OK", "Done successfully");
