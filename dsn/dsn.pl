@@ -96,8 +96,8 @@ sub getReports
 }
 sub mysql_escape
 {
-	#\x00, \n, \r, \, ', " and \x1a
-	$_[0] =~ s/([\x00\n\r\\\x22\x27\x1a])/\\\1/g;
+	#\, ', "
+	$_[0] =~ s/([\\\x22\x27])/\\\1/g;
 	return $_[0];
 }
 
@@ -139,7 +139,7 @@ sub updateStatus
 		}
 		print "Cant set status: $cmd \n $string";
 	}
-	if ( length($tempfile) > 0 )
+	elsif ( length($tempfile) > 0 )
 	{
 		unlink($tempfile);
 	}
