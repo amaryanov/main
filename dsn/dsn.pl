@@ -91,12 +91,8 @@ sub writeLog
 	if ( open(LOG, ">>$logfile") )
 	{
 		flock(LOG, LOCK_EX);
+		seek(LOG, 0, SEEK_END);
 		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-		$message =~ s/([^\n]{50,70})(?:\b\s*|\n)/$1\n/gi;
-		while ( $message =~ m/([^\n]{71})/ )
-		{
-			$message =~ s/([^\n]{70})([^\n])/$1\n$2/g;
-		}
 		$message =~ s/(\n|\n\r)/\n\t/g;
 		print LOG "[$hour:$min:$sec $mday.$mon.$year] ($logid) <$type> $message\n" ; 
 		close(LOG);
