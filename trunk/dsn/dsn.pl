@@ -201,7 +201,7 @@ if ( $messagePart == -1 )
 }
 
 my $unsubscribeLink = getHeader($message_parts[$messagePart], "list-unsubscribe");
-$unsubscribeLink =~ /unsubscribe\/([a-z0-9]{64})(\d+)/;
+$unsubscribeLink =~ /mailto:rm-([a-z0-9]{64})(\d+)\@/;
 my $unsubscribeHash = $1;
 my $list_id = $2;
 if ( $list_id !~ /^\d+$/ )
