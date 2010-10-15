@@ -67,6 +67,7 @@ aprutilreb="0"
 neonreb="0"
 sqlitereb="0"
 libmilterreb="0"
+pcrereb="0"
 
 #users
 export wwwuser="www"
@@ -271,10 +272,10 @@ if [ $nginxbuild = "0" -a \
 	$dkimbuild = "0" -a \
 	$dkimreb = "0" -a \
 	$dkimconf = "0" -a \
-	$fetchmailbuild="0" -a \
-	$maildropbuild="0" -a \
-	$fetchmailreb="0" -a \
-	$maildropreb="0" \
+	$fetchmailbuild = "0" -a \
+	$maildropbuild = "0" -a \
+	$fetchmailreb = "0" -a \
+	$maildropreb = "0" \
 ]
 then
 	echo 'Nothing to do.'
@@ -331,6 +332,8 @@ mkdir -p ${buildlog}fetchmail/${fetchmailver}
 fetchmaillog=`mktemp -u ${buildlog}fetchmail/${fetchmailver}/XXX`
 mkdir -p ${buildlog}maildrop/${maildropver}
 maildroplog=`mktemp -u ${buildlog}maildrop/${maildropver}/XXX`
+mkdir -p ${buildlog}pcre/${pcrever}
+pcrelog=`mktemp -u ${buildlog}pcre/${pcrever}/XXX`
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -342,6 +345,47 @@ mkdir -p ${datadir}sites
 chmod 777 ${datadir}run
 
 cd $srcdir
+#pcre
+if  [ ! -e ${builddir}other/pcre/${pcrever} -o $pcrereb = "1" ] \
+	&& [  $maildropbuild = "1" -o $maildropreb = "1"  ] \
+	|| [ $nginxbuild = "1" -o $nginxreb = "1" ]
+then
+	echo "START BUILD pcre-"${pcrever} | tee -a $pcrelog
+	if [ -e pcre-${pcrever} ]
+	then
+		echo -n "Clean pcre-${pcrever}..." | tee -a $pcrelog
+		cd pcre-${pcrever}
+			make distclean >> $pcrelog 2>&1
+		cd $OLDPWD
+		echo "DONE" | tee -a $pcrelog
+	else
+		cd $archdir
+			dl http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz pcre-${pcrever}.tar.gz $pcrelog
+		cd $OLDPWD
+		echo -n "Unpack pcre-${pcrever}..." | tee -a $pcrelog
+		tar -xzvf ${archdir}pcre-${pcrever}.tar.gz >> $pcrelog 2>&1
+		echo "DONE" | tee -a $pcrelog
+	fi
+
+	if [ ! -e ${builddir}other/pcre/${pcrever} -o $pcrereb = "1" ] \
+		&& [ $maildropbuild = "1" -o $maildropreb = "1" ]
+	then
+		echo -n "Make pcre-${pcrever}..." | tee -a $pcrelog
+		cd pcre-${pcrever}
+			./configure --prefix=${builddir}other/pcre/${pcrever} --enable-utf8 --enable-newline-is-any >> $pcrelog 2>&1 && \
+			make >> $pcrelog 2>&1 && \
+			if [ -e ${builddir}other/pcre/${pcrever} ]
+			then
+				mkdir -p ${oldbuilddir}pcre/${pcrever}
+				mv ${builddir}other/pcre/${pcrever} `mktemp -ud ${oldbuilddir}pcre/${pcrever}/XXX` >> $pcrelog 2>&1
+			fi && \
+			make install >> $pcrelog 2>&1 && \
+			make distclean >> $pcrelog 2>&1 || exit 1 #clean for nginx
+		cd $OLDPWD
+		echo "DONE" | tee -a $pcrelog
+	fi
+	echo "DONE BUILD pcre-"${pcrever} | tee -a $pcrelog
+fi
 #zlib
 if  [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ] \
 	&& [ $phpbuild = "1" -o $mysqlbuild = "1" -o $subversionbuild = "1" \
@@ -370,7 +414,7 @@ then
 	if [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ] \
 		&& [ $phpbuild = "1" -o $mysqlbuild = "1" -o $subversionbuild = "1" -o $phpreb = "1" \
 			-o $mysqlreb = "1" -o $subversionreb = "1" -o $maildropbuild = "1" -o $maildropreb = "1" \
-			-o $fetchmailbuild = "1" -o $fetchmailreb = "1"]
+			-o $fetchmailbuild = "1" -o $fetchmailreb = "1" ]
 	then
 		echo -n "Make zlib-${zlibver}..." | tee -a $zliblog
 		cd zlib-${zlibver}
@@ -469,21 +513,6 @@ then
 		echo -n "Unpack nginx-${nginxver}..." | tee -a $nginxlog
 		tar -xzvf ${archdir}nginx-${nginxver}.tar.gz >> $nginxlog 2>&1
 		echo "DONE" | tee -a $nginxlog
-	fi
-	if [ -e pcre-${pcrever} ]
-	then
-		echo -n "Clean pcre-${pcrever}..." | tee -a $pcrelog
-		cd pcre-${pcrever}
-			make distclean >> $pcrelog 2>&1
-		cd $OLDPWD
-		echo "DONE" | tee -a $pcrelog
-	else
-		cd $archdir
-			dl http://downloads.sourceforge.net/project/pcre/pcre/${pcrever}/pcre-${pcrever}.tar.gz pcre-${pcrever}.tar.gz $pcrelog
-		cd $OLDPWD
-		echo -n "Unpack pcre-${pcrever}..." | tee -a $pcrelog
-		tar -xzvf ${archdir}pcre-${pcrever}.tar.gz >> $pcrelog 2>&1
-		echo "DONE" | tee -a $pcrelog
 	fi
 	echo -n "Make nginx-${nginxver}..." | tee -a $nginxlog
 	rmdata=0
@@ -1638,6 +1667,9 @@ then
 	fi
 	echo -n "Make maildrop-${maildropver}..." | tee -a $maildroplog
 	cd maildrop-${maildropver}/
+		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/pcre/${pcrever}/lib" \
+		CFLAGS="-I${builddir}other/pcre/${pcrever}/include -L${builddir}other/pcre/${pcrever}/lib" \
+		CXXFLAGS="-I${builddir}other/pcre/${pcrever}/include -L${builddir}other/pcre/${pcrever}/lib" \
 		./configure --prefix=${builddir}main/maildrop/${maildropver} --disable-authlib >> $maildroplog 2>&1 && \
 		make >> $maildroplog 2>&1 && \
 		if [ -e ${builddir}main/maildrop/${maildropver} ]
