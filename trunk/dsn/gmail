@@ -1,0 +1,4 @@
+openssl s_client -connect imap.gmail.com:993 </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > .sslcerts/gmail.pem
+/home/www/server/build/openssl/bin/c_rehash .sslcerts
+openssl x509 -in ~/.sslcerts/gmail.pem -noout -md5 -fingerprint
+
