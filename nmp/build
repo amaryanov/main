@@ -16,6 +16,8 @@ subversionbuild=0
 rsyncbuild=0
 postfixbuild=0
 dkimbuild=0
+maildropbuild=0
+fetchmailbuild=0
 
 #download
 download=1
@@ -28,13 +30,16 @@ subversionsym=0
 rsyncsym=0
 postfixsym=0
 dkimsym=0
+opensslsym=0
+maildropsym=0
+fetchmailsym=0
 
 #configure
 nginxconf=0
 mysqlconf=0
 mysqlbackupconf=0
 phpconf=0
-dkimconf=1
+dkimconf=0
 
 #rebuild
 nginxreb=0
@@ -43,7 +48,9 @@ phpreb=0
 subversionreb=0
 rsyncreb=0
 postfixreb=0
-dkimreb=1
+dkimreb=0
+maildropreb=0
+fetchmailreb=0
 zlibreb=0
 opsslreb=0
 curlreb=0
@@ -78,9 +85,11 @@ phpver="5.3.3"
 subversionver="1.6.12"
 rsyncver="3.0.7"
 postfixver="2.7.1"
+maildropver="2.5.1"
+fetchmailver="6.3.18"
 eaccver="0.9.6.1"
 zlibver="1.2.5"
-opsslver="0.9.8o"
+opensslver="0.9.8o"
 pcrever="8.10"
 curlver="7.21.0"
 mcryptver="2.5.8"
@@ -227,7 +236,22 @@ if [ $dkimreb = "1" -a ! -e ${builddir}main/dkim-milter/${dkimver} ]
 then
 	dkimreb=0
 fi
-
+if [ $fetchmailreb = "1" -a ! -e ${builddir}main/fetchmail/${fetchmailver} ]
+then
+	fetchmailreb=0
+fi
+if [ $maildropreb = "1" -a ! -e ${builddir}main/maildrop/${maildropver} ]
+then
+	maildropreb=0
+fi
+if [ $maildropbuild = "1" -a -e ${builddir}main/maildrop/${maildropver} ]
+then
+	maildropbuild="0"
+fi
+if [ $fetchmailbuild = "1" -a -e ${builddir}main/fetchmail/${fetchmailver} ]
+then
+	fetchmailbuild="0"
+fi
 if [ $nginxbuild = "0" -a \
 	$mysqlbuild = "0" -a \
 	$phpbuild = "0" -a \
@@ -245,8 +269,12 @@ if [ $nginxbuild = "0" -a \
 	$postfixbuild = "0" -a \
 	$postfixreb = "0" -a \
 	$dkimbuild = "0" -a \
-	$dkimreb = "0" -a\
-	$dkimconf = "0" \
+	$dkimreb = "0" -a \
+	$dkimconf = "0" -a \
+	$fetchmailbuild="0" -a \
+	$maildropbuild="0" -a \
+	$fetchmailreb="0" -a \
+	$maildropreb="0" \
 ]
 then
 	echo 'Nothing to do.'
@@ -255,8 +283,8 @@ fi
 #logging
 mkdir -p ${buildlog}zlib/${zlibver}
 zliblog=`mktemp -u ${buildlog}zlib/${zlibver}/XXX`
-mkdir -p ${buildlog}openssl/${opsslver}
-openssllog=`mktemp -u ${buildlog}openssl/${opsslver}/XXX`
+mkdir -p ${buildlog}openssl/${opensslver}
+openssllog=`mktemp -u ${buildlog}openssl/${opensslver}/XXX`
 mkdir -p ${buildlog}nginx/${nginxver}
 nginxlog=`mktemp -u ${buildlog}nginx/${nginxver}/XXX`
 mkdir -p ${buildlog}pcre/${pcrever}
@@ -299,6 +327,10 @@ mkdir -p ${buildlog}postfix/${postfixver}
 postfixlog=`mktemp -u ${buildlog}postfix/${postfixver}/XXX`
 mkdir -p ${buildlog}dkim-milter/${dkimver}
 dkimlog=`mktemp -u ${buildlog}dkim-milter/${dkimver}/XXX`
+mkdir -p ${buildlog}fetchmail/${fetchmailver}
+fetchmaillog=`mktemp -u ${buildlog}fetchmail/${fetchmailver}/XXX`
+mkdir -p ${buildlog}maildrop/${maildropver}
+maildroplog=`mktemp -u ${buildlog}maildrop/${maildropver}/XXX`
 
 mkdir -p $srcdir
 mkdir -p $builddir
@@ -312,7 +344,10 @@ chmod 777 ${datadir}run
 cd $srcdir
 #zlib
 if  [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ] \
-	&& [ $phpbuild = "1" -o $mysqlbuild = "1" -o $subversionbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" -o $subversionreb = "1" ] \
+	&& [ $phpbuild = "1" -o $mysqlbuild = "1" -o $subversionbuild = "1" \
+		-o $phpreb = "1" -o $mysqlreb = "1" -o $subversionreb = "1" \
+		-o $maildropbuild = "1" -o $maildropreb = "1" \
+		-o $fetchmailbuild = "1" -o $fetchmailreb = "1" ] \
 	|| [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
 	echo "START BUILD zlib-"${zlibver} | tee -a $zliblog
@@ -333,7 +368,9 @@ then
 	fi
 
 	if [ ! -e ${builddir}other/zlib/${zlibver} -o $zlibreb = "1" ] \
-		&& [ $phpbuild = "1" -o $mysqlbuild = "1" -o $subversionbuild = "1" -o $phpreb = "1" -o $mysqlreb = "1" -o $subversionreb = "1" ]
+		&& [ $phpbuild = "1" -o $mysqlbuild = "1" -o $subversionbuild = "1" -o $phpreb = "1" \
+			-o $mysqlreb = "1" -o $subversionreb = "1" -o $maildropbuild = "1" -o $maildropreb = "1" \
+			-o $fetchmailbuild = "1" -o $fetchmailreb = "1"]
 	then
 		echo -n "Make zlib-${zlibver}..." | tee -a $zliblog
 		cd zlib-${zlibver}
@@ -353,54 +390,60 @@ then
 fi
 #openssl
 if [ $phpbuild = "1" -o $phpreb = "1" -o $subversionbuild = "1" \
-		-o $subversionreb = "1" -o $dkimbuild = "1" -o $dkimreb = "1" ] \
-	&& [ ! -e ${builddir}other/openssl/${opsslver} -o $opsslreb = "1" ] \
+		-o $subversionreb = "1" -o $dkimbuild = "1" -o $dkimreb = "1" \
+		-o $fetchmailbuild = "1" -o $maildropbuild = "1" \
+		-o $fetchmailreb = "1" -o $maildropreb = "1" ] \
+	&& [ ! -e ${builddir}other/openssl/${opensslver} -o $opsslreb = "1" ] \
 	|| [ $nginxbuild = "1" -o $nginxreb = "1" ]
 then
-	echo "START BUILD openssl-${opsslver}" | tee -a $openssllog
-	if [ -e openssl-${opsslver} ]
+	echo "START BUILD openssl-${opensslver}" | tee -a $openssllog
+	if [ -e openssl-${opensslver} ]
 	then
-		echo -n "Clean openssl-${opsslver}..." | tee -a $openssllog
-		cd openssl-${opsslver}
+		echo -n "Clean openssl-${opensslver}..." | tee -a $openssllog
+		cd openssl-${opensslver}
 			make clean dclean >> $openssllog 2>&1
 		cd $OLDPWD
 		echo "DONE" | tee -a $openssllog
 	else
 		cd $archdir
-			dl http://www.openssl.org/source/openssl-${opsslver}.tar.gz ${opsslver}.tar.gz $openssllog
+			dl http://www.openssl.org/source/openssl-${opensslver}.tar.gz ${opensslver}.tar.gz $openssllog
 		cd $OLDPWD
-		echo -n "Unpack openssl-${opsslver}..." | tee -a $openssllog
-		tar -xzvf ${archdir}openssl-${opsslver}.tar.gz >> $openssllog 2>&1
+		echo -n "Unpack openssl-${opensslver}..." | tee -a $openssllog
+		tar -xzvf ${archdir}openssl-${opensslver}.tar.gz >> $openssllog 2>&1
 		echo "DONE" | tee -a $openssllog
 	fi
 
-	if [ $phpbuild = "1" -o $phpreb = "1" -o $subversionbuild = "1" -o $subversionreb = "1"\
-			-o $dkimbuild = "1" -o $dkimreb = "1" ] \
-		&& [ ! -e ${builddir}other/openssl/${opsslver} -o $opsslreb = "1" ]
+	if [ $phpbuild = "1" -o $phpreb = "1" \
+			-o $subversionbuild = "1" -o $subversionreb = "1"\
+			-o $dkimbuild = "1" -o $dkimreb = "1" \
+			-o $fetchmailbuild = "1" -o $maildropbuild = "1" \
+			-o $fetchmailreb = "1" -o $maildropreb = "1" ] \
+		&& [ ! -e ${builddir}other/openssl/${opensslver} -o $opsslreb = "1" ]
 	then
-		echo -n "Make openssl-${opsslver}..." | tee -a $openssllog
-		cd openssl-${opsslver}
-			./config --prefix=${builddir}other/openssl/${opsslver} \
+		echo -n "Make openssl-${opensslver}..." | tee -a $openssllog
+		cd openssl-${opensslver}
+			./config --prefix=${builddir}other/openssl/${opensslver} \
 				-L${builddir}other/zlib/${zlibver}/lib \
 				-I${builddir}other/zlib/${zlibver}/include \
 				-Wl,-rpath \
 				-Wl,${builddir}other/zlib/${zlibver}/lib \
 				-Wl,-rpath \
-				-Wl,${builddir}other/openssl/${opsslver}/lib \
+				-Wl,${builddir}other/openssl/${opensslver}/lib \
 				threads zlib shared >> $openssllog 2>&1 && \
 			make >> $openssllog 2>&1 && \
 			make test >> $openssllog 2>&1 && \
-			if [ -e ${builddir}other/openssl/${opsslver} ]
+			if [ -e ${builddir}other/openssl/${opensslver} ]
 			then
-				mkdir -p ${oldbuilddir}openssl/${opsslver}
-				mv ${builddir}other/openssl/${opsslver} `mktemp -ud ${oldbuilddir}openssl/${opsslver}/XXX` >> $openssllog 2>&1
+				mkdir -p ${oldbuilddir}openssl/${opensslver}
+				mv ${builddir}other/openssl/${opensslver} `mktemp -ud ${oldbuilddir}openssl/${opensslver}/XXX` >> $openssllog 2>&1
 			fi && \
 			make install >> $openssllog 2>&1 && \
+			ln -s ${builddir}other/openssl/${opensslver} ${builddir}openssl && \
 			make dclean >> $openssllog 2>&1 || exit 1 #clean for nginx
 		cd $OLDPWD
 		echo "DONE" | tee -a $openssllog
 	fi
-	echo "DONE BUILD openssl-${opsslver}" | tee -a $openssllog
+	echo "DONE BUILD openssl-${opensslver}" | tee -a $openssllog
 fi
 
 #nginx
@@ -470,7 +513,7 @@ then
 			--http-fastcgi-temp-path=${nginxdatadir}fastcgi_temp \
 			--with-zlib=${srcdir}zlib-${zlibver} \
 			--with-http_ssl_module \
-			--with-openssl=${srcdir}openssl-${opsslver}\
+			--with-openssl=${srcdir}openssl-${opensslver}\
 			--with-pcre=${srcdir}pcre-${pcrever}  >> $nginxlog 2>&1 && \
 		make >> $nginxlog 2>&1 && \
 		if [ -e ${builddir}main/nginx/${nginxver} ]
@@ -967,7 +1010,7 @@ then
 		fi
 		echo -n "Make curl-${curlver}..." | tee -a $curllog
 		cd curl-${curlver}
-			LDFLAGS="-Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib -Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib" \
+			LDFLAGS="-Wl,-rpath -Wl,${builddir}other/openssl/${opensslver}/lib -Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib" \
 			./configure --prefix=${builddir}other/curl/${curlver} \
 				--disable-debug \
 				--enable-optimize \
@@ -998,7 +1041,7 @@ then
 				--without-libssh2 \
 				--without-librtmp \
 				--with-zlib=${builddir}other/zlib/${zlibver} \
-				--with-ssl=${builddir}other/openssl/${opsslver} \
+				--with-ssl=${builddir}other/openssl/${opensslver} \
 				--without-gnutls \
 				--without-polarssl \
 				--without-nss \
@@ -1083,7 +1126,7 @@ then
 			--with-mhash=${builddir}other/mhash/${mhashver} \
 			--with-mysql=${builddir}main/mysql/${mysqlfullver}/ \
 			--with-mysqli=${builddir}main/mysql/${mysqlfullver}/bin/mysql_config \
-			--with-openssl=${builddir}other/openssl/${opsslver} \
+			--with-openssl=${builddir}other/openssl/${opensslver} \
 			--with-pcre-regex \
 			--with-pdo-mysql=${builddir}main/mysql/${mysqlfullver}/ \
 			--with-png-dir=${builddir}other/libpng/${pngver} \
@@ -1214,7 +1257,7 @@ then
 			PATH="${PATH}:${builddir}other/libxml2/${libxmlver}/bin" \
 				./configure --prefix=${builddir}other/neon/${neonver} \
 				--with-ssl=openssl \
-				--with-libs=${builddir}other/zlib/${zlibver}:${builddir}other/openssl/${opsslver} \
+				--with-libs=${builddir}other/zlib/${zlibver}:${builddir}other/openssl/${opensslver} \
 				--without-gssapi >> $neonlog 2>&1 && \
 			make >> $neonlog 2>&1 && \
 			if [ -e ${builddir}other/neon/${neonver} ]
@@ -1276,13 +1319,13 @@ then
 	fi
 	echo -n "Make subversion-${subversionver}..." | tee -a $subversionlog
 	cd subversion-${subversionver}
-		LDFLAGS="-L${builddir}other/zlib/${zlibver}/lib -L${builddir}other/openssl/${opsslver}/lib -L${builddir}other/apr-util/${aprutilver}/lib \
+		LDFLAGS="-L${builddir}other/zlib/${zlibver}/lib -L${builddir}other/openssl/${opensslver}/lib -L${builddir}other/apr-util/${aprutilver}/lib \
 			-L${builddir}other/apr/${aprver}/lib \
 			-L${builddir}other/sqlite/${sqlitever}/lib \
 			-L${builddir}other/neon/${neonver}/lib \
 			-Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib \
 			-Wl,-rpath -Wl,${builddir}other/sqlite/${sqlitever}/lib \
-			-Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib" \
+			-Wl,-rpath -Wl,${builddir}other/openssl/${opensslver}/lib" \
 			./configure --prefix=${builddir}main/subversion/${subversionver} \
 			--with-apr=${builddir}other/apr/${aprver} \
 			--with-apr-util=${builddir}other/apr-util/${aprutilver} \
@@ -1486,7 +1529,7 @@ then
 	cd dkim-milter-${dkimver}/
 		cat > devtools/Site/site.config.m4 << EOF &&
 		APPENDDEF(\`bld_dkim_filter_INCDIRS', \`-I${srcdir}sendmail-${sendmailver}/include')
-		APPENDDEF(\`bld_dkim_filter_LIBDIRS', \`-L${libmilterbuilddir} -L${builddir}other/openssl/${opsslver}/lib')
+		APPENDDEF(\`bld_dkim_filter_LIBDIRS', \`-L${libmilterbuilddir} -L${builddir}other/openssl/${opensslver}/lib')
 		define(\`confEBINDIR', \`${dkimbuilddir}bin/')
 		define(\`confUBINDIR', \`${dkimbuilddir}bin/')
 		define(\`confINSTALL', \`\${BUILDBIN}/install.sh')
@@ -1495,7 +1538,7 @@ then
 		define(\`confMANROOT', \`${dkimbuilddir}man/man')
 		define(\`confMANGRP',\`""')
 		define(\`confMANOWN',\`""')
-		define(\`confLDOPTS',\`-Wl,-rpath -Wl,${builddir}other/openssl/${opsslver}/lib')
+		define(\`confLDOPTS',\`-Wl,-rpath -Wl,${builddir}other/openssl/${opensslver}/lib')
 EOF
 		./Build >> $dkimlog 2>&1 && \
 		if [ -e ${dkimbuilddir} ]
@@ -1532,6 +1575,86 @@ then
 	${scriptdir}/conf/dkim/dkim.conf.sh > ${dkimdatadir}conf/dkim.conf
 	chmod 755 ${datadir}dkim/init.d
 	echo "DONE" | tee -a $dkimlog
+fi
+#fetchmail
+if [ $fetchmailbuild = "1" -o $fetchmailreb = "1" ]
+then
+	echo "START BUILD fetchmail-${fetchmailver}" | tee -a $fetchmaillog
+	if [ -e fetchmail-${fetchmailver} ]
+	then
+		echo -n "Clean fetchmail-${fetchmailver}..." | tee -a $fetchmaillog
+		cd fetchmail-${fetchmailver}
+			make distclean >> $fetchmaillog 2>&1
+		cd $OLDPWD
+		echo "DONE" | tee -a $fetchmaillog
+	else
+		cd $archdir
+			dl http://download2.berlios.de/fetchmail/fetchmail-${fetchmailver}.tar.bz2 fetchmail-${fetchmailver}.tar.bz $fetchmaillog
+		cd $OLDPWD
+		echo -n "Unpack fetchmail-${fetchmailver}..." | tee -a $fetchmaillog
+		tar -xjvf ${archdir}fetchmail-${fetchmailver}.tar.bz >> $fetchmaillog 2>&1
+		echo "DONE" | tee -a $fetchmaillog
+	fi
+	echo -n "Make fetchmail-${fetchmailver}..." | tee -a $fetchmaillog
+	cd fetchmail-${fetchmailver}/
+		LDFLAGS="-Wl,-rpath -Wl,${builddir}other/zlib/${zlibver}/lib -Wl,-rpath -Wl,${builddir}openssl/lib" \
+		./configure --prefix=${builddir}main/fetchmail/${fetchmailver} --with-ssl=${builddir}openssl >> $fetchmaillog 2>&1 && \
+		make >> $fetchmaillog 2>&1 && \
+		if [ -e ${builddir}main/fetchmail/${fetchmailver} ]
+		then
+			mkdir -p  ${oldbuilddir}fetchmail/${fetchmailver}
+			mv ${builddir}main/fetchmail/${fetchmailver} `mktemp -ud ${oldbuilddir}fetchmail/${fetchmailver}/XXX` >> $fetchmaillog 2>&1
+		fi && \
+		make install >> $fetchmaillog 2>&1 || exit 1
+	if [ $fetchmailsym = "1" ]
+	then
+		cd ${builddir}
+			rm -f fetchmail
+			ln -s main/fetchmail/${fetchmailver} fetchmail
+		cd $OLDPWD
+	fi
+	echo "DONE" | tee -a $fetchmaillog
+	echo "DONE BUILD fetchmail-${fetchmailver}" | tee -a $fetchmaillog
+fi
+#maildrop
+if [ $maildropbuild = "1" -o $maildropreb = "1" ]
+then
+	echo "START BUILD maildrop-${maildropver}" | tee -a $maildroplog
+	if [ -e maildrop-${maildropver} ]
+	then
+		echo -n "Clean maildrop-${maildropver}..." | tee -a $maildroplog
+		cd maildrop-${maildropver}
+			make distclean >> $maildroplog 2>&1
+		cd $OLDPWD
+		echo "DONE" | tee -a $maildroplog
+	else
+		cd $archdir
+			dl http://sourceforge.net/projects/courier/files/maildrop/${maildropver}/maildrop-${maildropver}.tar.bz2/download \
+				maildrop-${maildropver}.tar.bz $maildroplog
+		cd $OLDPWD
+		echo -n "Unpack maildrop-${maildropver}..." | tee -a $maildroplog
+		tar -xjvf ${archdir}maildrop-${maildropver}.tar.bz >> $maildroplog 2>&1
+		echo "DONE" | tee -a $maildroplog
+	fi
+	echo -n "Make maildrop-${maildropver}..." | tee -a $maildroplog
+	cd maildrop-${maildropver}/
+		./configure --prefix=${builddir}main/maildrop/${maildropver} --disable-authlib >> $maildroplog 2>&1 && \
+		make >> $maildroplog 2>&1 && \
+		if [ -e ${builddir}main/maildrop/${maildropver} ]
+		then
+			mkdir -p  ${oldbuilddir}maildrop/${maildropver}
+			mv ${builddir}main/maildrop/${maildropver} `mktemp -ud ${oldbuilddir}maildrop/${maildropver}/XXX` >> $maildroplog 2>&1
+		fi && \
+		make install >> $maildroplog 2>&1 || exit 1
+	if [ $maildropsym = "1" ]
+	then
+		cd ${builddir}
+			rm -f maildrop
+			ln -s main/maildrop/${maildropver} maildrop
+		cd $OLDPWD
+	fi
+	echo "DONE" | tee -a $maildroplog
+	echo "DONE BUILD maildrop-${maildropver}" | tee -a $maildroplog
 fi
 
 exit 0
