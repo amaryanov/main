@@ -16,7 +16,7 @@ subversionbuild=0
 rsyncbuild=0
 postfixbuild=0
 dkimbuild=0
-maildropbuild=0
+maildropbuild=1
 fetchmailbuild=0
 
 #download
@@ -31,7 +31,7 @@ rsyncsym=0
 postfixsym=0
 dkimsym=0
 opensslsym=0
-maildropsym=0
+maildropsym=1
 fetchmailsym=0
 
 #configure
