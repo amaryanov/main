@@ -1,0 +1,158 @@
+/*SCROLL GRID STYLES*/
+.wbr
+{
+	display: block;
+	font-size: 0px;
+	line-height: 0px;
+	width: 0px;
+	height: 0px;
+	float: none;
+	clear: both;
+}
+.scroll_table .not_loaded
+{
+	vertical-align: top;
+	float: none;
+	clear: both;
+}
+.scroll_table .loaded
+{
+	float: left;
+	height: 20px;
+}
+.scroll_table .tbody_gray
+{
+	background-color: #eee;
+}
+.scroll_table .tbody_gray .loaded
+{
+	background-color: #eee;
+}
+.scroll_table
+{
+	border-spacing: 0px;
+	border-collapse: collapse;
+}
+.scroll_div
+{
+	width: 100%;
+	overflow: auto;
+}
+.header_div
+{
+	width: 100%;
+	height: 36px;
+	position: relative;
+}
+.header_div > div
+{
+	float: left;
+	font-weight: bold;
+	overflow: hidden;
+}
+.header_div > div .filter_compare
+{
+	width: 20%;
+	height: 20px;
+	float: left;
+}
+.header_div > div .filter_input
+{
+	width: 80%;
+	height: 20px;
+	float: left;
+}
+.header_div .reload_button
+{
+	position: absolute;
+	right: 0px;
+	top: 16px;
+	height: 16px;
+	width: 18px;
+	background-color: white;
+	border: 1px black solid;
+	cursor: pointer;
+ 	line-height: 16px;
+ 	text-align: center;
+	font-weight: normal;
+	font-size: 11px;
+}
+.header_div > div .filter_compare_float
+{
+	width: 50%;
+}
+.header_div > div .filter_input_float
+{
+	width: 50%;
+}
+.header_div > div .filter_compare_int
+{
+	width: 50%;
+}
+.header_div > div .filter_input_int
+{
+	width: 50%;
+}
+.header_div > div .filter_compare select
+{
+	width: 100%;
+	height: 100%;
+}
+.header_div > div .filter_input input
+{
+	height: 16px;
+	border: 1px black solid;
+	width: 98%;
+}
+.header_div .page_size_element
+{
+	position: absolute;
+	top: 0px;
+	right: 0px;
+	width: 18px;
+	height: 14px;
+	border: 1px black solid;
+ 	text-align: center;
+ 	font-size: 11px;
+}
+.header_div > div
+{
+	white-space: nowrap;
+	overflow: hidden;
+}
+.header_div .header_title
+{
+	width: 100%;
+	cursor: pointer;
+	position: relative;
+	height: 16px;
+	line-height: 16px;
+}
+.header_div .header_title .desc_direction
+{
+	position: absolute;
+	right: 10px;
+	top: 0px;
+	width: 10px;
+	height: 100%;
+	display: none;
+}
+.header_div .header_title .asc_direction
+{
+	position: absolute;
+	right: 10px;
+	top: 0px;
+	width: 10px;
+	height: 100%;
+	display: none;
+}
+.header_div .header_title_asc .asc_direction
+{
+	display: block;
+}
+.header_div .header_title_desc .desc_direction
+{
+	display: block;
+}
+/*END SCROLL GRID STYLES*/
+
