@@ -1,0 +1,160 @@
+<?php
+/**
+ * Maryanov
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@maryanov.com so we can send you a copy immediately.
+ *
+ * @category   Maryanov
+ * @package    Maryanov_Invoice
+ * @author     Maryanov Anton
+ * @copyright  Copyright (c) 2009 Maryanov Anton (http://www.maryanov.com)
+ * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ */
+?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<title>Рахунок-фактура &#8470; СФ-<?php echo $this->getOrder()->getId(); ?></title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	</head>
+	<body>
+		<div style="font-family: Helvetica, Arial, Verdana, Freesans, sans-serif; font-size: 14px;">
+			<div align="center">
+				<b>Рахунок-фактура № СФ-<?php echo $this->getOrder()->getId(); ?><br>
+<?php
+$billing_address = $this->getOrder()->getBillingAddress();
+$invoice_time = strtotime($this->getOrder()->getCreatedAtStoreDate());
+$order_currency = $this->getOrder()->getOrderCurrency();
+$is_uah = ($order_currency->getCode() == 'UAH');
+$grand_total = $this->getOrder()->getGrandTotal();
+if(!$is_uah)
+{
+	$grand_total = $order_currency->convert($grand_total, 'UAH');
+}
+$grand_total = round($grand_total, 2);
+$grand_total_formated = number_format($grand_total, 2, ',', ' ');
+?>
+				від <?php echo date('j', $invoice_time) . ' ' . $this->ua_monthes[date('n', $invoice_time)] . ' ' . date('Y', $invoice_time);?> р.</b>
+			</div>
+			<p>
+				<b>Продавець:</b> ТОВ &laquo;Вектор&raquo;
+				<br>
+				Адреса: 49127, м. Одеса, вул. Літня, 55. Тел. (048) 123-45-67
+				<br>
+				Р/р 260086125007 в КБ &laquo;Приватбанк&raquo; у м. Одеса
+				<br>
+				МФО 303030. Код ОКПО 1937856
+				<br>
+				ІНН 193907005499, свід. № 04637598
+			</p>
+			<p>
+				<b>Одержувач:</b> <?php echo $billing_address->getFirstname(); ?> <?php echo $billing_address->getLastname(); ?>
+				<br>
+				Адреса: <?php echo $billing_address->getPostcode(); ?>, <?php echo $billing_address->getRegion()?>, <?php echo $billing_address->getCity(); ?>, <?php echo $billing_address->getStreet(1); ?>. Тел. <?php echo $billing_address->getTelephone(); ?>
+			</p>
+			<p>
+				<b>Платник:</b> він же.
+			</p>
+			<table cellpadding="0" cellspacing="0" class="invoice" style="border-collapse: collapse; font-family: Helvetica, Arial, Verdana, Freesans, sans-serif; font-size: 14px;">
+				<thead>
+					<tr>
+						<th style="padding: 1px 4px; border: 1px solid black; white-space: nowrap;">
+							№ п/п
+						</th>
+						<th style="padding: 1px 4px; border: 1px solid black; white-space: nowrap;">
+							Найменування товару
+						</th>
+						<th style="padding: 1px 4px; border: 1px solid black; white-space: nowrap;">
+							Од.
+						</th>
+						<th style="padding: 1px 4px; border: 1px solid black; white-space: nowrap;">
+							Кількість
+						</th>
+						<th style="padding: 1px 4px; border: 1px solid black; white-space: nowrap;">
+							Ціна без ПДВ, грн.
+						</th>
+						<th style="padding: 1px 4px; border: 1px solid black; white-space: nowrap;">
+							Сума без ПДВ, грн.
+						</th>
+					</tr>
+				</thead>
+				<tbody><?php
+$items = $this->getOrder()->getAllItems();
+$items_count = count($items) + 1;
+for($i = 1; $i < $items_count; $i++)
+{
+	$item = $items[$i - 1];
+	$cur_price = $item->getPrice();
+	if(!$is_uah)
+	{
+		$cur_price = $order_currency->convert($cur_price, 'UAH');
+	}
+	echo '
+					<tr>
+						<td align="center" style="padding: 1px 4px; border: 1px solid black;">
+							' . $i . '
+						</td>
+						<td align="left" style="padding: 1px 4px; border: 1px solid black;">
+							 ' . $item->getSku() . '
+						</td>
+						<td align="center" style="padding: 1px 4px; border: 1px solid black;">
+							шт.
+						</td>
+						<td align="center" style="padding: 1px 4px; border: 1px solid black;">
+							' . $item->getQtyOrdered() * 1 . '
+						</td>
+						<td align="center" style="padding: 1px 4px; border: 1px solid black;">
+							' . number_format(round($cur_price, 2), 2, ',', ' ') . '
+						</td>
+						<td align="center" style="padding: 1px 4px; border: 1px solid black;">
+							' . number_format(round($cur_price * $item->getQtyOrdered(), 2), 2, ',', ' ') . '
+						</td>
+					</tr>';
+}
+?>
+					<tr>
+						<td colspan="5" align="right" style="padding: 1px 4px;">
+							Разом товару на суму
+						</td>
+						<td align="center" style="padding: 1px 4px; border: 1px solid black;">
+							<?php echo $grand_total_formated; ?>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="5" align="right" style="padding: 1px 4px;">
+							ПДВ
+						</td>
+						<td align="center" style="padding: 1px 4px; border: 1px solid black;">
+							&mdash;
+						</td>
+					</tr>
+					<tr>
+						<td colspan="5" align="right" style="padding: 1px 4px;">
+							Усього з ПДВ
+						</td>
+						<td align="center" style="padding: 1px 4px; border: 1px solid black;">
+							<?php echo $grand_total_formated; ?>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<p>
+				Сума: <b><?php echo $this->num2str($grand_total); ?></b>
+			</p>
+			<p>
+				Рахунок підлягає оплаті протягом 5 банківських днів із дати його виписування.
+			</p>
+			<p>
+				Менеджер з продажу Мар'янов А. О.
+			</p>
+		</div>
+	</body>
+</html>

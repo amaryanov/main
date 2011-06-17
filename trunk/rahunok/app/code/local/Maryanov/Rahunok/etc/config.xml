@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/**
+ * Maryanov
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@maryanov.com so we can send you a copy immediately.
+ *
+ * @category   Maryanov
+ * @package    Maryanov_Rahunok
+ * @author     Maryanov Anton
+ * @copyright  Copyright (c) 2009 Maryanov Anton (http://www.maryanov.com)
+ * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ */
+-->
+<config>
+    <modules>
+        <Maryanov_Rahunok>
+            <version>0.3.0</version>
+        </Maryanov_Rahunok>
+    </modules>
+    <global>
+        <rewrite>
+            <maryanov_rahunok>
+                <from><![CDATA[#^/rahunok/print/id/(\d+)#]]></from>
+                <to>/rahunok/print/invoice/id/$1</to>
+            </maryanov_rahunok>
+        </rewrite>
+        <blocks>
+            <rahunok>
+                <class>Maryanov_Rahunok_Block</class>
+            </rahunok>
+        </blocks>
+        <models>
+            <sales>
+                 <rewrite>
+                    <order>Maryanov_Rahunok_Model_Order</order>
+                </rewrite>
+            </sales>
+        </models>
+    </global>
+    <frontend>
+        <translate>
+            <modules>
+                <Maryanov_Rahunok>
+                    <files>
+                        <default>Maryanov_Rahunok.csv</default>
+                    </files>
+                </Maryanov_Rahunok>
+            </modules>
+        </translate>
+        <layout>
+            <updates>
+                <Maryanov_Rahunok module="Maryanov_Rahunok">
+                    <file>maryanov_rahunok.xml</file>
+                </Maryanov_Rahunok>
+            </updates>
+        </layout>
+        <routers>
+            <maryanov_rahunok>
+                <use>standard</use>
+                <args>
+                    <module>Maryanov_Rahunok</module>
+                    <frontName>rahunok</frontName>
+                </args>
+            </maryanov_rahunok>
+        </routers>
+    </frontend>
+</config>
