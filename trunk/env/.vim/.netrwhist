@@ -1,0 +1,7 @@
+﻿let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =5
+let g:netrw_dirhist_1='/var/home/amaryanov/svn/main/service'
+let g:netrw_dirhist_2='/var/home/amaryanov/svn/main/service/config'
+let g:netrw_dirhist_3='/var/home/amaryanov/svn/main/service/lib'
+let g:netrw_dirhist_4='/var/home/amaryanov/svn/main/service'
+let g:netrw_dirhist_5='/var/home/amaryanov/svn/main/service/config'
