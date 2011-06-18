@@ -1,17 +1,18 @@
 <?php
-require_once dirname(__FILE__) . "/Product.php";
-require_once dirname(__FILE__) . "/Providers.php";
-require_once dirname(__FILE__) . "/DB.php";
+require_once dirname(__FILE__) . '/Product.php';
+require_once dirname(__FILE__) . '/Providers.php';
+require_once dirname(__FILE__) . '/DB.php';
 
 class Converter
 {
+
 	public static function convert($provider_id, $file_path)
 	{
 		global $STOCKS, $implemented_convertors;
 		$providers = Providers::getProviders();
 		if(!in_array($providers[$provider_id]['prog_name'], $implemented_convertors ))
 		{
-			throw new Exception("Convertion does not implemented for this provider.");
+			throw new Exception('Convertion does not implemented for this provider.');
 		}
 		$tmp_file_name = '';
 		if(is_array($file_path))
@@ -33,22 +34,23 @@ class Converter
 							$additional_conf = ' -scp1251 ';
 							break;
 					}
-					$res = shell_exec("export LANG=en_US.UTF-8 && xls2csv -dUTF-8 -q3 -c, -x " . $additional_conf . $file_path['tmp_name'] . ' > ' . $tmp_file_name);
+					$res = shell_exec('export LANG=en_US.UTF-8 && xls2csv -dUTF-8 -q3 -c, -x '
+						. $additional_conf . $file_path['tmp_name'] . ' > ' . $tmp_file_name);
 					$file_path = $tmp_file_name;
 				}
 				else
 				{
-					throw new Exception("Empty file.");
+					throw new Exception('Empty file.');
 				}
 			}
 			else
 			{
-				throw new Exception("Incorrect file.");
+				throw new Exception('Incorrect file.');
 			}
 		}
 		if(filesize($file_path))
 		{
-			$fp = fopen($file_path, "r");
+			$fp = fopen($file_path, 'r');
 			if($fp)
 			{
 				$row = 0;
@@ -133,11 +135,12 @@ class Converter
 					}
 					try
 					{
-						Product::insertTempProd($provider_id, $new_fields['prov_sku'], $new_fields['price'], $new_fields['stock']);
+						Product::insertTempProd($provider_id, $new_fields['prov_sku'],
+							$new_fields['price'], $new_fields['stock']);
 					}
 					catch(Exception $e)
 					{
-						echo "There was an error: " . $e->getMessage();
+						echo 'There was an error: ' . $e->getMessage();
 					}
 				}
 				Product::endInsertTempProd();
@@ -145,12 +148,12 @@ class Converter
 			}
 			else
 			{
-				throw new Exception("Can't get access to " . $file_path);
+				throw new Exception('Cant get access to ' . $file_path);
 			}
 		}
 		else
 		{
-			throw new Exception("Empty file.");
+			throw new Exception('Empty file.');
 		}
 		if(strlen($tmp_file_name))
 		{
@@ -158,20 +161,20 @@ class Converter
 		}
 		return true;
 	}
-	public static function convertForImport($attribute_set_id,
+	public static function convertForImport(
+		$attribute_set_id,
 		$file_path,
 		$rows_per_file = 50,
-		$category_ids = "",
+		$category_ids = '',
 		$add_update_products = 'update',
 		$out_of_stock = false,
 		$add_images = false,
 		$exclude_sku_list = null,
-		$import_language,
-		$attribytes_by_groups,
-		$name_manuf_fix)
+		$import_language = 'EN',
+		$attribytes_by_groups = true,
+		$name_manuf_fix = array())
 	{
 		global $STOCKS;
-		//$rows_per_file++;
 		$db = &DB::singleton();
 		$tmp_file_name = '';
 		if(is_array($file_path))
@@ -180,44 +183,47 @@ class Converter
 			{
 				$file_path = $file_path['tmp_name'];
 			}
-			else if($file_path['type'] == 'application/vnd.ms-excel' 
+			else if($file_path['type'] == 'application/vnd.ms-excel'
 				|| $file_path['type'] == 'application/msexcel')
 			{
 				if(filesize($file_path['tmp_name']))
 				{
 					$tmp_file_name = tempnam('/tmp', 'xls2csv_prodict_import_');
 					$additional_conf = '';
-					$res = shell_exec("export LANG=en_US.UTF-8 && xls2csv -dUTF-8 -q3 -c, -x " . $additional_conf . $file_path['tmp_name'] . ' > ' . $tmp_file_name);
+					$res = shell_exec('export LANG=en_US.UTF-8 && xls2csv -dUTF-8 -q3 -c, -x '
+						. $additional_conf . $file_path['tmp_name'] . ' > ' . $tmp_file_name);
 					$file_path = $tmp_file_name;
 				}
 				else
 				{
-					throw new Exception("Empty file.");
+					throw new Exception('Empty file.');
 				}
 			}
 			else
 			{
-				throw new Exception("Incorrect file.");
+				throw new Exception('Incorrect file.');
 			}
 		}
 		if(filesize($file_path))
 		{
-			$fp = fopen($file_path, "r");
+			$fp = fopen($file_path, 'r');
 			if($fp)
 			{
 				$exclude_skus = array();
 				if(!is_null($exclude_sku_list))
 				{
-					$exclude_skus = file($exclude_sku_list['tmp_name'], FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES | FILE_TEXT);
+					$exclude_skus = file($exclude_sku_list['tmp_name'],
+						FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES | FILE_TEXT);
 				}
 				$attribute_sets = Product::getAttributeSets();
-				$dir_name = PROJECT_HOME . "/dl/" . self::trans(mb_strtolower($attribute_sets[$attribute_set_id])) . '_' . date("d.m.y-H.i.s");
+				$dir_name = PROJECT_HOME . '/dl/' . self::trans(mb_strtolower($attribute_sets[$attribute_set_id]))
+					. '_' . date('d.m.y-H.i.s');
 				if(@mkdir($dir_name))
 				{
 					$column_names = array();
 					$column_names_from_file = fgetcsv($fp, 0, ',', '"');
 					$column_names_from_file_count = count($column_names_from_file);
-					$cur_column_name = "";
+					$cur_column_name = '';
 					$not_found_columns = array();
 					require_once MAGE_DIR . '/app/Mage.php';
 					$storeId = 0;
@@ -226,7 +232,9 @@ class Converter
 						->setAttributeSetFilter($attribute_set_id)
 						->addVisibleFilter()
 						->checkConfigurableProducts();
-					$attrs->getSelect()->joinLeft('eav_attribute_group', 'entity_attribute.attribute_group_id=eav_attribute_group.attribute_group_id', 'eav_attribute_group.attribute_group_name');
+					$attrs->getSelect()->joinLeft('eav_attribute_group',
+						'entity_attribute.attribute_group_id = eav_attribute_group.attribute_group_id',
+						'eav_attribute_group.attribute_group_name');
 					$attrs = $attrs->load();
 					$attrs_group = array();
 					$attributes = array();
@@ -264,19 +272,23 @@ class Converter
 						$cur_group = '';
 						for($i = 0; $i < $column_names_from_file_count; $i++)
 						{
-							if(substr($column_names_from_file[$i], 0, 2) == '**' && substr($column_names_from_file[$i], 0, -2))
+							if(substr($column_names_from_file[$i], 0, 2) == '**'
+								&& substr($column_names_from_file[$i], 0, -2))
 							{
-								$cur_group = substr($column_names_from_file[$i], 2, strlen($column_names_from_file[$i]) - 4);
+								$cur_group = substr($column_names_from_file[$i], 2,
+									strlen($column_names_from_file[$i]) - 4);
 								continue;
 							}
 							if($cur_group)
 							{
-								$cur_column_name = "";
-								if(isset($attrs_group[$cur_group]) && isset($attrs_group[$cur_group][$column_names_from_file[$i]]))
+								$cur_column_name = '';
+								if(isset($attrs_group[$cur_group])
+									&& isset($attrs_group[$cur_group][$column_names_from_file[$i]]))
 								{
 									$column_names[$attrs_group[$cur_group][$column_names_from_file[$i]]] = $i;
 								}
-								else if(isset($attrs_group[$cur_group]) && in_array($column_names_from_file[$i], $attrs_group[$cur_group]))
+								else if(isset($attrs_group[$cur_group])
+									&& in_array($column_names_from_file[$i], $attrs_group[$cur_group]))
 								{
 									$column_names[$column_names_from_file[$i]] = $i;
 								}
@@ -291,7 +303,7 @@ class Converter
 					{
 						for($i = 0; $i < $column_names_from_file_count; $i++)
 						{
-							$cur_column_name = "";
+							$cur_column_name = '';
 							$cur_column_name = $attributes[$column_names_from_file[$i]];
 							if(strlen($cur_column_name))
 							{
@@ -309,82 +321,82 @@ class Converter
 					}
 					if(count($not_found_columns))
 					{
-						echo "<h2>Ненайденные аттрибуты:</h2><p>" . implode("<br>", $not_found_columns) . "</p>";
+						echo '<h2>Notfound attributes:</h2><p>' . implode('<br>', $not_found_columns) . '</p>';
 					}
-					if(!isset($column_names["sku"]) && isset($column_names["name"]))
+					if(!isset($column_names['sku']) && isset($column_names['name']))
 					{
-						$column_names["sku"] = $column_names["name"];
+						$column_names['sku'] = $column_names['name'];
 						if($add_update_products == 'update')
 						{
-							unset($column_names["name"]);
+							unset($column_names['name']);
 						}
 					}
-					if(!isset($column_names["sku"]))
-					{   
+					if(!isset($column_names['sku']))
+					{
 						rmdir($dir_name);
-						throw new Exception("SKU is important.");
+						throw new Exception('SKU is important.');
 					}
 					if(count($name_manuf_fix) && !isset($column_names['manufacturer']))
 					{
 						rmdir($dir_name);
-						throw new Exception("Manufacturer is important.");
+						throw new Exception('Manufacturer is important.');
 					}
 					if(count($column_names))
 					{
 						$additional_columns = array();
 						$dyn_additional_columns = array();
-						if($category_ids != "dummy")
+						if($category_ids != 'dummy')
 						{
-							$additional_columns["category_ids"] = $category_ids;
+							$additional_columns['category_ids'] = $category_ids;
 						}
-						$low_stock_date = gmdate("Y-m-d H:i:s");
+						$low_stock_date = gmdate('Y-m-d H:i:s');
 						if($out_of_stock)
 						{
-							$additional_columns["qty"] = "0";
-							$additional_columns["low_stock_date"] = $low_stock_date;
-							$additional_columns["is_in_stock"] = "0";
+							$additional_columns['qty'] = '0';
+							$additional_columns['low_stock_date'] = $low_stock_date;
+							$additional_columns['is_in_stock'] = '0';
 						}
 						else if(isset($column_names['availability_status']))
 						{
-							$dyn_additional_columns[] = "qty";
-							$dyn_additional_columns[] = "low_stock_date";
-							$dyn_additional_columns[] = "is_in_stock";
+							$dyn_additional_columns[] = 'qty';
+							$dyn_additional_columns[] = 'low_stock_date';
+							$dyn_additional_columns[] = 'is_in_stock';
 						}
 						if($add_images)
 						{
-							$dyn_additional_columns[] = "image";
-							$dyn_additional_columns[] = "small_image";
-							$dyn_additional_columns[] = "thumbnail";
+							$dyn_additional_columns[] = 'image';
+							$dyn_additional_columns[] = 'small_image';
+							$dyn_additional_columns[] = 'thumbnail';
 						}
 						if($add_update_products == 'add')
 						{
-							$additional_columns["store"] = "admin";
-							$additional_columns["websites"] = "base";
-							$additional_columns["visibility"] = $GLOBALS['_'][$import_language]['conv4imp']['Каталог, поиск'];
-							$additional_columns["tax_class_id"] = $GLOBALS['_'][$import_language]['conv4imp']['Нет'];
-							$additional_columns["status"] = $GLOBALS['_'][$import_language]['conv4imp']['Включено'];
+							$additional_columns['store'] = 'admin';
+							$additional_columns['websites'] = 'base';
+							$additional_columns['visibility'] = $GLOBALS['_'][$import_language]['conv4imp']['Каталог, поиск'];
+							$additional_columns['tax_class_id'] = $GLOBALS['_'][$import_language]['conv4imp']['Нет'];
+							$additional_columns['status'] = $GLOBALS['_'][$import_language]['conv4imp']['Включено'];
 							if(!isset($column_names['weight']))
 							{
-								$additional_columns["weight"] = "1";
+								$additional_columns['weight'] = '1';
 							}
-							$additional_columns["type"] = "simple";
-							if(!isset($column_names["price"]))
+							$additional_columns['type'] = 'simple';
+							if(!isset($column_names['price']))
 							{
-								$additional_columns["price"] = "0";
+								$additional_columns['price'] = '0';
 							}
-//							$attribute_sets = Product::getAttributeSets();
-							$additional_columns["attribute_set"] = $attribute_sets[$attribute_set_id];
-							$dyn_additional_columns[] = "url_key";
-							$dyn_additional_columns[] = "meta_keyword";
+							$additional_columns['attribute_set'] = $attribute_sets[$attribute_set_id];
+							$dyn_additional_columns[] = 'url_key';
+							$dyn_additional_columns[] = 'meta_keyword';
 						}
 						$short_desc_id = -1;
-						if(isset($column_names["description"]) && !isset($column_names["short_description"]))
+						if(isset($column_names['description']) && !isset($column_names['short_description']))
 						{
 							$desc_id = array_search('description', array_keys($column_names));
-							$dyn_additional_columns[] = "short_description";
+							$dyn_additional_columns[] = 'short_description';
 						}
-						$all_column_names = array_merge(array_keys($column_names), array_keys($additional_columns), $dyn_additional_columns);
-						$file_to_write = fopen($dir_name . "/" . basename($dir_name) . "_1.csv", 'w');
+						$all_column_names = array_merge(array_keys($column_names),
+							array_keys($additional_columns), $dyn_additional_columns);
+						$file_to_write = fopen($dir_name . '/' . basename($dir_name) . '_1.csv', 'w');
 						fputcsv($file_to_write, $all_column_names, ',', '"');
 						$row = 0;
 						$cur_row = array();
@@ -398,7 +410,9 @@ class Converter
 							$cur_row = array();
 							foreach($column_names as $column_name => $id)
 							{
-								if(($attributes_types[$column_name] == 'select' || $attributes_types[$column_name] == 'multiselect') && strlen($data[$id]))
+								if(($attributes_types[$column_name] == 'select'
+									|| $attributes_types[$column_name] == 'multiselect')
+									&& strlen($data[$id]))
 								{
 									$found = false;
 									for($i = 0; $i < count($select_values[$column_name]); $i++)
@@ -412,7 +426,8 @@ class Converter
 									}
 									if(!$found)
 									{
-										printf('<h3>Неправильное значение \'%s\' для аттрибута \'%s\' для записи №%d</h3>', $data[$id], $column_name, $row + 1);
+										printf(INCORRECT_VALUE_FOR_SELECT,
+											$data[$id], $column_name, $row + 1);
 										$cur_row[] = '';
 									}
 								}
@@ -425,7 +440,7 @@ class Converter
 									case 'description':
 										if(!strlen($cur_row[count($cur_row) - 1]))
 										{
-											$cur_row[count($cur_row) - 1] = "Извините, на данный момент нет описания для этого товара.";
+											$cur_row[count($cur_row) - 1] = NO_DESCRIPTION;
 										}
 										else
 										{
@@ -440,11 +455,13 @@ class Converter
 								{
 									if(isset($name_manuf_fix['name']) && $name_id !== false)
 									{
-										$cur_row[$name_id] = strtoupper($data[$column_names['manufacturer']]) . ' ' . $cur_row[$name_id];
+										$cur_row[$name_id] = strtoupper($data[$column_names['manufacturer']])
+											. ' ' . $cur_row[$name_id];
 									}
 									if(isset($name_manuf_fix['sku']))
 									{
-										$cur_row[$sku_id] = strtoupper($data[$column_names['manufacturer']]) . ' ' . $cur_row[$sku_id];
+										$cur_row[$sku_id] = strtoupper($data[$column_names['manufacturer']])
+											. ' ' . $cur_row[$sku_id];
 									}
 								}
 								else
@@ -455,13 +472,13 @@ class Converter
 									}
 								}
 							}
-							$is_product_exist = Product::isProductExistInShop($cur_row[$sku_id]);
 							if(!strlen($cur_row[$sku_id])
 								|| in_array($cur_row[$sku_id], $exclude_skus))
 							{
 								continue;
 							}
-							else if(($is_product_exist && $add_update_products == 'add')
+							$is_product_exist = Product::isProductExistInShop($cur_row[$sku_id]);
+							if(($is_product_exist && $add_update_products == 'add')
 									|| (!$is_product_exist && $add_update_products == 'update'))
 							{
 								$add_update_products_error_skus[] = $cur_row[$sku_id];
@@ -480,9 +497,7 @@ class Converter
 										break;
 									case 'meta_keyword':
 										$cur_row[] = ($name_prefx_id !== false ? $cur_row[$name_prefx_id] : $attribute_sets[$attribute_set_id])
-											. ' '
-											. $cur_row[$sku_id]
-											. ' купить';
+											. ' ' . $cur_row[$sku_id] . META_KEYWORDS;
 										break;
 									case 'image':
 									case 'small_image':
@@ -495,7 +510,7 @@ class Converter
 									case 'qty':
 										if($cur_row[$availability_status_id] == $STOCKS['in_stock'])
 										{
-											$cur_row[] = '10';
+											$cur_row[] = DEFAULT_QTY;
 										}
 										else
 										{
@@ -529,7 +544,8 @@ class Converter
 							if($row%$rows_per_file == 0)
 							{
 								fclose($file_to_write);
-								$file_to_write = fopen($dir_name . "/"  . basename($dir_name) . "_" . ($row/$rows_per_file + 1) . ".csv", 'w');
+								$file_to_write = fopen($dir_name . '/'  . basename($dir_name)
+									. '_' . ($row/$rows_per_file + 1) . '.csv', 'w');
 								fputcsv($file_to_write, $all_column_names, ',', '"');
 							}
 						}
@@ -537,34 +553,35 @@ class Converter
 						{
 							if($add_update_products == 'update')
 							{
-								echo '<h2>Этих товаров нет в магазине:</h2>';
+								echo NO_GOODS_MESSAGE;
 							}
 							else if($add_update_products == 'add')
 							{
-								echo '<h2>Эти товары уже есть в магазине:</h2>';
+								echo GOODS_ARE_IN_DB;
 							}
 							echo implode('<br/>', $add_update_products_error_skus);
 						}
 						fclose($file_to_write);
 						self::removeTempFiles();
-						exec("cd " . dirname($dir_name) . " && zip -r $dir_name.zip " . basename($dir_name) . " && rm -rf $dir_name");
-						$archive_name = basename($dir_name) . ".zip";
+						exec('cd ' . dirname($dir_name) . " && zip -r $dir_name.zip "
+							. basename($dir_name) . " && rm -rf $dir_name");
+						$archive_name = basename($dir_name) . '.zip';
 					}
 				}
 				else
 				{
-					throw new Exception("Can't create temporary dir.");
+					throw new Exception('Cant create temporary dir.');
 				}
 				fclose($fp);
 			}
 			else
 			{
-				throw new Exception("Can't get access to " . $file_path);
+				throw new Exception('Cant get access to ' . $file_path);
 			}
 		}
 		else
 		{
-			throw new Exception("Empty file.");
+			throw new Exception('Empty file.');
 		}
 		if(strlen($tmp_file_name))
 		{
@@ -580,13 +597,14 @@ class Converter
 	{
 		$res = '';
 		$db = &DB::singleton();
-		$products = $db->getNumArray('select sku, margin, ceil(prov_price+margin), prov_price, price_markup, prov_stock from shop_products_update_temp');
+		$products = $db->getNumArray('select sku, margin, ceil(prov_price+margin), '
+			. 'prov_price, price_markup, prov_stock from shop_products_update_temp');
 		$products_count = count($products);
 		if($products_count)
 		{
 			$file_name = PROJECT_HOME . '/dl/shop-prods-need-for-update_' . date('d.m.y-H.i.s') . '.csv';
 			$file_to_write = fopen($file_name, 'w');
-			$columns = array('Модель', 'Маржа', 'Цена', 'Цена П.', 'Наценка', 'Наличие');
+			$columns = array('Model', 'Маржа', 'Price', 'Price S.', 'Наценка', 'Avalibility');
 			fputcsv($file_to_write, $columns, ',', '"');
 			for($i = 0; $i < $products_count; $i++)
 			{
@@ -595,90 +613,22 @@ class Converter
 			fclose($file_to_write);
 			self::removeTempFiles();
 			$zip_name = basename(substr($file_name, 0, strlen($file_name) - 4) . '.zip');
-			exec('cd ' . PROJECT_HOME . '/dl/ && zip -r ' . $zip_name . ' ' . basename($file_name) . ' && rm -f ' . $file_name);
+			exec('cd ' . PROJECT_HOME . '/dl/ && zip -r ' . $zip_name . ' '
+				. basename($file_name) . ' && rm -f ' . $file_name);
 			$res =  '/dl/' . $zip_name;
 		}
 		return $res;
 	}
 	public static function trans($str, $space_char = '_')
 	{
-		$res = "";
-		$chars = array(
-			'а' => 'a',
-			'б' => 'b',
-			'в' => 'v',
-			'г' => 'g',
-			'д' => 'd',
-			'е' => 'e',
-			'ё' => 'jo',
-			'ж' => 'zh',
-			'з' => 'z',
-			'и' => 'i',
-			'й' => 'j',
-			'к' => 'k',
-			'л' => 'l',
-			'м' => 'm',
-			'н' => 'n',
-			'о' => 'o',
-			'п' => 'p',
-			'р' => 'r',
-			'с' => 's',
-			'т' => 't',
-			'у' => 'u',
-			'ф' => 'f',
-			'х' => 'h',
-			'ц' => 'c',
-			'ч' => 'ch',
-			'ш' => 'sh',
-			'щ' => 'shh',
-			'ы' => 'y',
-			'э' => 'eh',
-			'ю' => 'yu',
-			'я' => 'ya',
-			' ' => $space_char,
-			'-' => '-',
-			'a' => 'a',
-			'b' => 'b',
-			'c' => 'c',
-			'd' => 'd',
-			'e' => 'e',
-			'f' => 'f',
-			'g' => 'g',
-			'h' => 'h',
-			'i' => 'i',
-			'j' => 'j',
-			'k' => 'k',
-			'l' => 'l',
-			'm' => 'm',
-			'n' => 'n',
-			'o' => 'o',
-			'p' => 'p',
-			'q' => 'q',
-			'r' => 'r',
-			's' => 's',
-			't' => 't',
-			'u' => 'u',
-			'v' => 'v',
-			'w' => 'w',
-			'x' => 'x',
-			'y' => 'y',
-			'z' => 'z',
-			'0' => '0',
-			'1' => '1',
-			'2' => '2',
-			'3' => '3',
-			'4' => '4',
-			'5' => '5',
-			'6' => '6',
-			'7' => '7',
-			'8' => '8',
-			'9' => '9',
-			);
-		for($i = 0; $i < mb_strlen($str); $i++)
+		global $trans_chars;
+		$res = '';
+		$str_len = mb_strlen($str);
+		for($i = 0; $i < $str_len; $i++)
 		{
-			$res .= $chars[mb_substr($str, $i, 1)];
+			$res .= $trans_chars['ru'][mb_substr($str, $i, 1)];
 		}
 		return $res;
 	}
 }
-?>
+
