@@ -1,7 +1,23 @@
 <?php
+/**
+* Code for converting files to the correct Magento format.
+*
+* PHP version 5
+*
+* @author     Anton Maryanov <amaryanov@gmail.com>
+* @copyright  Anton Maryanov
+* @license    GNU GPL v3 http://www.gnu.org/licenses/gpl-3.0.html
+* @version    SVN: $Id$
+*/
+
 require_once dirname(__FILE__) . '/Product.php';
 require_once dirname(__FILE__) . '/Providers.php';
 require_once dirname(__FILE__) . '/DB.php';
+
+/**
+* Class contains functionality for converting pricelists and products data list
+* to the correct Magento format.
+*/
 
 class Converter
 {
