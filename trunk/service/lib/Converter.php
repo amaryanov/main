@@ -46,11 +46,11 @@ class Converter
 	/**
 	 * Update action
 	 */
-	public const UPDATE_ACTION = 'update';
+	const UPDATE_ACTION = 'update';
 	/**
 	 * Add action
 	 */
-	public const ADD_ACTION = 'add';
+	const ADD_ACTION = 'add';
     /**#@-*/
 	/**
 	 * Converts non Magento import file into currect Magento import file.
