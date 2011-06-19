@@ -1,10 +1,10 @@
 <?php
 /**
- * Code for converting files to the correct Magento format.
+ * Functionality for converting import files to the correct Magento format.
  *
  * Magento importer does not have the functionality that check
  * the importing file before importing, so it is impossible to
- * find errors in importing file before the importing. Also format of 
+ * find errors in importing file before the importing. Also format of
  * Magento import files is not human frendly. This class contains
  * functionality that convert human frendly files into Magento format
  * and checks if all data is correct and add some non-obvious fields
@@ -38,11 +38,11 @@ require_once dirname(__FILE__) . '/DB.php';
 
 class Converter
 {
-    /**#@+
+	/**#@+
 	 * Import file convertion action.
-     * @access public
-     * @var string
-     */
+	 * @access public
+	 * @var string
+	 */
 	/**
 	 * Update action
 	 */
@@ -51,17 +51,17 @@ class Converter
 	 * Add action
 	 */
 	const ADD_ACTION = 'add';
-    /**#@-*/
+	/**#@-*/
 	/**
 	 * Converts non Magento import file into currect Magento import file.
 	 * Show warnings if file cant be converted due to incorrect import data.
 	 * Use output buffering if you would like to catch all messages in this method
-	 * 
+	 *
 	 * @param int $attribute_set_id Magento's attribute set id
 	 * @param array $file_path An information array of uploaded file, receved
 	 *     directly from $_FILES array
 	 * @param int $rows_per_file Split import result file into several ones,
-	 *     that should contain not more than $rows_per_file products
+	 *     which should contain not more than $rows_per_file products
 	 * @param string $category_ids Magento's identifiers of categories, to which
 	 *     imported products should belong
 	 * @param string $import_action The type of import action: add or update
@@ -344,7 +344,7 @@ class Converter
 							$availability_status_id = array_search('availability_status', array_keys($column_names));
 							$name_id = array_search('name', array_keys($column_names));
 							$add_update_products_error_skus = array();
-							// the main loop, which goes through the convertion file 
+							// the main loop, which goes through the convertion file
 							while (($data = fgetcsv($fp, 0, ',', '"')) !== false)
 							{
 								$cur_row = array();
