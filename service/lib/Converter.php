@@ -2,6 +2,15 @@
 /**
 * Code for converting files to the correct Magento format.
 *
+* Magento importer does not have the functionality that check
+* the importing file before importing, so it is impossible to
+* find errors in importing file before the importing. Also format of 
+* Magento import files is not human frendly. This class contains
+* functionality that convert human frendly files into Magento format
+* and checks if all data is correct and add some non-obvious fields
+* to the resulting file.
+* imp
+*
 * PHP version 5
 *
 * @author     Anton Maryanov <amaryanov@gmail.com>
@@ -11,172 +20,16 @@
 */
 
 require_once dirname(__FILE__) . '/Product.php';
-require_once dirname(__FILE__) . '/Providers.php';
+require_once dirname(__FILE__) . '/Suppliers.php';
 require_once dirname(__FILE__) . '/DB.php';
 
 /**
 * Class contains functionality for converting pricelists and products data list
-* to the correct Magento format.
+* into correct Magento format.
 */
 
 class Converter
 {
-
-	public static function convert($provider_id, $file_path)
-	{
-		global $STOCKS, $implemented_convertors;
-		$providers = Providers::getProviders();
-		if(!in_array($providers[$provider_id]['prog_name'], $implemented_convertors ))
-		{
-			throw new Exception('Convertion does not implemented for this provider.');
-		}
-		$tmp_file_name = '';
-		if(is_array($file_path))
-		{
-			if($file_path['type'] == 'text/csv')
-			{
-				$file_path = $file_path['tmp_name'];
-			}
-			else if($file_path['type'] == 'application/vnd.ms-excel' )
-			{
-				if(filesize($file_path['tmp_name']))
-				{
-					$tmp_file_name = tempnam('/tmp', 'xls2csv_pricelist_');
-					$additional_conf = '';
-					switch($providers[$provider_id]['prog_name'])
-					{
-						case 'SouthPalmira':
-						case 'medterm':
-							$additional_conf = ' -scp1251 ';
-							break;
-					}
-					$res = shell_exec('export LANG=en_US.UTF-8 && xls2csv -dUTF-8 -q3 -c, -x '
-						. $additional_conf . $file_path['tmp_name'] . ' > ' . $tmp_file_name);
-					$file_path = $tmp_file_name;
-				}
-				else
-				{
-					throw new Exception('Empty file.');
-				}
-			}
-			else
-			{
-				throw new Exception('Incorrect file.');
-			}
-		}
-		if(filesize($file_path))
-		{
-			$fp = fopen($file_path, 'r');
-			if($fp)
-			{
-				$row = 0;
-				$new_fields = array('prov_sku' => '', 'price' => '', 'stock' => '');
-				Product::deleteTempProd($provider_id);
-				Product::startInsertTempProd();
-				while (($data = fgetcsv($fp, 0, ',', '"')) !== false)
-				{
-					$row++;
-					$new_fields['prov_sku'] = '';
-					$new_fields['price'] = '0';
-					$new_fields['stock'] = $STOCKS['not in stock'];
-					switch($providers[$provider_id]['prog_name'])
-					{
-						case 'preximD': //Прексим Д
-							if(!strlen($data[1]))
-							{
-								continue 2;
-							}
-							$new_fields['prov_sku'] = $data[0];
-							$new_fields['price'] = (string)$data[1];
-							$new_fields['stock'] = $STOCKS['in_stock'];
-							break;
-						case 'SouthPalmira':
-							if($row < 3 || !strlen($data[2]))
-							{
-								continue 2;
-							}
-							$new_fields['prov_sku'] = $data[2];
-							$new_fields['price'] = (string)$data[3];
-							$new_fields['stock'] = $STOCKS['in_stock'];
-							break;
-						case 'NTCom':
-							if($row < 9 || !strlen($data[2]))
-							{
-								continue 2;
-							}
-							$new_fields['prov_sku'] = $data[2];
-							switch(trim($data[8]))
-							{
-								case '+':
-								case '+/-':
-									$new_fields['price'] = (string)$data[4];
-									$new_fields['stock'] = $STOCKS['in_stock'];
-									break;
-								case '-':
-									$new_fields['stock'] = $STOCKS['not_in_stock'];
-									break;
-								case 'в пути':
-									$new_fields['stock'] = $STOCKS['wait'];
-									break;
-								case 'под заказ':
-									$new_fields['stock'] = $STOCKS['order'];
-									break;
-							}
-							break;
-						case 'medterm':
-							if($row < 9 || !strlen($data[1]) || !strlen($data[0]))
-							{
-								continue 2;
-							}
-							$new_fields['prov_sku'] = $data[1];
-							$new_fields['stock'] = $STOCKS['adjust'];
-							break;
-						case 'vodovorot':
-							if($row < 7 || !strlen($data[1]) || !strlen($data[2]))
-							{
-								continue 2;
-							}
-							$new_fields['prov_sku'] = $data[1];
-							$new_fields['stock'] = $STOCKS['adjust'];
-							break;
-						case 'foxtrot':
-							if(!strlen($data[0]) || !strlen($data[1]))
-							{
-								continue 2;
-							}
-							$new_fields['prov_sku'] = $data[0];
-							$new_fields['price'] = (string)$data[1];
-							$new_fields['stock'] = $STOCKS['in_stock'];
-							break;
-					}
-					try
-					{
-						Product::insertTempProd($provider_id, $new_fields['prov_sku'],
-							$new_fields['price'], $new_fields['stock']);
-					}
-					catch(Exception $e)
-					{
-						echo 'There was an error: ' . $e->getMessage();
-					}
-				}
-				Product::endInsertTempProd();
-				fclose($fp);
-			}
-			else
-			{
-				throw new Exception('Cant get access to ' . $file_path);
-			}
-		}
-		else
-		{
-			throw new Exception('Empty file.');
-		}
-		if(strlen($tmp_file_name))
-		{
-			unlink($tmp_file_name);
-		}
-		return true;
-	}
 	public static function convertForImport(
 		$attribute_set_id,
 		$file_path,
@@ -605,10 +458,175 @@ class Converter
 		}
 		return $archive_name;
 	}
+	public static function importSupplierPricelist($supplier_id, $file_path)
+	{
+		global $STOCKS, $implemented_convertors;
+		$suppliers = Suppliers::getSuppliers();
+		if(!in_array($suppliers[$supplier_id]['prog_name'], $implemented_convertors ))
+		{
+			throw new Exception('Convertion does not implemented for this supplier.');
+		}
+		$tmp_file_name = '';
+		if(is_array($file_path))
+		{
+			if($file_path['type'] == 'text/csv')
+			{
+				$file_path = $file_path['tmp_name'];
+			}
+			else if($file_path['type'] == 'application/vnd.ms-excel' )
+			{
+				if(filesize($file_path['tmp_name']))
+				{
+					$tmp_file_name = tempnam('/tmp', 'xls2csv_pricelist_');
+					$additional_conf = '';
+					switch($suppliers[$supplier_id]['prog_name'])
+					{
+						case 'SouthPalmira':
+						case 'medterm':
+							$additional_conf = ' -scp1251 ';
+							break;
+					}
+					$res = shell_exec('export LANG=en_US.UTF-8 && xls2csv -dUTF-8 -q3 -c, -x '
+						. $additional_conf . $file_path['tmp_name'] . ' > ' . $tmp_file_name);
+					$file_path = $tmp_file_name;
+				}
+				else
+				{
+					throw new Exception('Empty file.');
+				}
+			}
+			else
+			{
+				throw new Exception('Incorrect file.');
+			}
+		}
+		if(filesize($file_path))
+		{
+			$fp = fopen($file_path, 'r');
+			if($fp)
+			{
+				$row = 0;
+				$new_fields = array('prov_sku' => '', 'price' => '', 'stock' => '');
+				Product::deleteTempProd($supplier_id);
+				Product::startInsertTempProd();
+				while (($data = fgetcsv($fp, 0, ',', '"')) !== false)
+				{
+					$row++;
+					$new_fields['prov_sku'] = '';
+					$new_fields['price'] = '0';
+					$new_fields['stock'] = $STOCKS['not in stock'];
+					switch($suppliers[$supplier_id]['prog_name'])
+					{
+						case 'preximD': //Прексим Д
+							if(!strlen($data[1]))
+							{
+								continue 2;
+							}
+							$new_fields['prov_sku'] = $data[0];
+							$new_fields['price'] = (string)$data[1];
+							$new_fields['stock'] = $STOCKS['in_stock'];
+							break;
+						case 'SouthPalmira':
+							if($row < 3 || !strlen($data[2]))
+							{
+								continue 2;
+							}
+							$new_fields['prov_sku'] = $data[2];
+							$new_fields['price'] = (string)$data[3];
+							$new_fields['stock'] = $STOCKS['in_stock'];
+							break;
+						case 'NTCom':
+							if($row < 9 || !strlen($data[2]))
+							{
+								continue 2;
+							}
+							$new_fields['prov_sku'] = $data[2];
+							switch(trim($data[8]))
+							{
+								case '+':
+								case '+/-':
+									$new_fields['price'] = (string)$data[4];
+									$new_fields['stock'] = $STOCKS['in_stock'];
+									break;
+								case '-':
+									$new_fields['stock'] = $STOCKS['not_in_stock'];
+									break;
+								case 'в пути':
+									$new_fields['stock'] = $STOCKS['wait'];
+									break;
+								case 'под заказ':
+									$new_fields['stock'] = $STOCKS['order'];
+									break;
+							}
+							break;
+						case 'medterm':
+							if($row < 9 || !strlen($data[1]) || !strlen($data[0]))
+							{
+								continue 2;
+							}
+							$new_fields['prov_sku'] = $data[1];
+							$new_fields['stock'] = $STOCKS['adjust'];
+							break;
+						case 'vodovorot':
+							if($row < 7 || !strlen($data[1]) || !strlen($data[2]))
+							{
+								continue 2;
+							}
+							$new_fields['prov_sku'] = $data[1];
+							$new_fields['stock'] = $STOCKS['adjust'];
+							break;
+						case 'foxtrot':
+							if(!strlen($data[0]) || !strlen($data[1]))
+							{
+								continue 2;
+							}
+							$new_fields['prov_sku'] = $data[0];
+							$new_fields['price'] = (string)$data[1];
+							$new_fields['stock'] = $STOCKS['in_stock'];
+							break;
+					}
+					try
+					{
+						Product::insertTempProd($supplier_id, $new_fields['prov_sku'],
+							$new_fields['price'], $new_fields['stock']);
+					}
+					catch(Exception $e)
+					{
+						echo 'There was an error: ' . $e->getMessage();
+					}
+				}
+				Product::endInsertTempProd();
+				fclose($fp);
+			}
+			else
+			{
+				throw new Exception('Cant get access to ' . $file_path);
+			}
+		}
+		else
+		{
+			throw new Exception('Empty file.');
+		}
+		if(strlen($tmp_file_name))
+		{
+			unlink($tmp_file_name);
+		}
+		return true;
+	}
 	private static function removeTempFiles()
 	{
 		exec('find ' . PROJECT_HOME . '/dl/ -type f -iname \'*.zip\' -cmin +30 -exec rm -f {} \;');
 	}
+	
+	/**
+	* Return the link to zip compressed csv file, containig
+	* the list of product prices that need to be updated in Magento catalog,
+	* after all supplier pricelists were imported into our system.
+	* This method is part of {@link Converter::importSupplierPricelist()},
+	* but implemented separately, because our best prices are generated
+	* only after all price lists for each supplier is imported into the system.
+	* Resulting file should be reviewed by manager and imported to the Magento.
+	*/
 	public static function getShopProdsNeedForUpdateLink()
 	{
 		$res = '';
@@ -620,7 +638,7 @@ class Converter
 		{
 			$file_name = PROJECT_HOME . '/dl/shop-prods-need-for-update_' . date('d.m.y-H.i.s') . '.csv';
 			$file_to_write = fopen($file_name, 'w');
-			$columns = array('Model', 'Маржа', 'Price', 'Price S.', 'Наценка', 'Avalibility');
+			$columns = array('SKU', 'Margin', 'Price', 'Supplier Price', 'Price markup', 'Avalibility');
 			fputcsv($file_to_write, $columns, ',', '"');
 			for($i = 0; $i < $products_count; $i++)
 			{
@@ -635,14 +653,23 @@ class Converter
 		}
 		return $res;
 	}
-	public static function trans($str, $space_char = '_')
+	/**
+	* Transliteration method.
+	*
+	* Transliteration done in simple loop, because it is necessary
+	* to work with multibyte strings, and also for symbols for which
+	* there is no equivalent in $trans_chars, should be removed
+	*/
+	public static function trans($str, $space_char = '_', $lang = 'ru')
 	{
 		global $trans_chars;
+		$lang_trans_chars = $trans_chars[$lang];
+		$lang_trans_chars[' '] = '_';
 		$res = '';
 		$str_len = mb_strlen($str);
 		for($i = 0; $i < $str_len; $i++)
 		{
-			$res .= $trans_chars['ru'][mb_substr($str, $i, 1)];
+			$res .= $lang_trans_chars[mb_substr($str, $i, 1)];
 		}
 		return $res;
 	}
