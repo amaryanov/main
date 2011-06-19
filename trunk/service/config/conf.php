@@ -87,7 +87,6 @@ $trans_chars['ru'] = array(
 	'э' => 'eh',
 	'ю' => 'yu',
 	'я' => 'ya',
-	' ' => $space_char,
 	'-' => '-',
 	'a' => 'a',
 	'b' => 'b',
