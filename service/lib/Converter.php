@@ -757,7 +757,7 @@ class Converter
 	public static function getShopProdsNeedForUpdateLink()
 	{
 		$res = '';
-		$db = &DB::singleton();
+		$db = DB::singleton();
 		$products = $db->getNumArray('select sku, margin, ceil(prov_price+margin), '
 			. 'prov_price, price_markup, prov_stock from shop_products_update_temp');
 		$products_count = count($products);
