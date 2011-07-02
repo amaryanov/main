@@ -7,7 +7,7 @@ temprespdf="${tempimagename}.pdf"
 temppdf="`mktemp`.pdf"
 temppdf2="`mktemp`"
 pages=`pdfinfo "$pdf" | grep -i pages | sed 's/.*\s\([0-9]\+\)$/\1/'`
-start="511"
+start="1"
 i="$start"
 
 rmTemp()
