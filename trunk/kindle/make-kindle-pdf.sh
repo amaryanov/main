@@ -7,10 +7,11 @@ touch "$tempimage"
 temppdf="`mktemp`.pdf"
 temppdf2="`mktemp`"
 md5file="`mktemp`"
+pages=`pdfinfo "$pdf" | grep -i pages | sed 's/.*\s\([0-9]\+\)$/\1/'`
 md5sum "$tempimage" > $md5file
 i="1"
 
-while true
+while [ $i -le $pages ]
 do
 	echo -n "Processing page $i..."
 	#convert -density 300 "$pdf"[$i] -resize 100% "$tempimage"
@@ -22,7 +23,7 @@ do
 	fi
 	md5sum "$tempimage" > $md5file
 	convert "$tempimage" -crop `convert "$tempimage" -virtual-pixel edge -blur 0x13 -fuzz 13% -trim -format '%wx%h%O' info:` +repage \
-		-quality 100% -type Grayscale -resize 750x -density 167 -compress jpeg "$temprespdf"
+		-quality 100% -resize 750x -density 167 -compress lossless "$temprespdf"
 	if [ "$?" = "0" ]
 	then
 		if [ "$i" = "1" ]
