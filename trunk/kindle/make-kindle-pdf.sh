@@ -35,8 +35,18 @@ do
 		echo "no file"
 		break
 	fi
+#hacks:
+#	convert "$tempimage" -crop -15-15 "$tempimage"
+#	if [ $i -ge 7 -a `expr $i % 2` -eq "1" ]
+#	then
+#		convert "$tempimage" -crop +520+200 "$tempimage"
+#		convert "$tempimage" -crop -0+50 "$tempimage"
+#	fi
+#	convert "$tempimage" -crop `convert "$tempimage" -virtual-pixel edge -blur 0x13 -fuzz 13% -trim -format '%wx%h%O' info:` +repage \
+#	-quality 100% -resize 1024x -compress lossless "$temprespdf"
+##############
 	convert "$tempimage" -crop `convert "$tempimage" -virtual-pixel edge -blur 0x13 -fuzz 13% -trim -format '%wx%h%O' info:` +repage \
-		-quality 100% -resize 750x -density 167 -compress lossless "$temprespdf"
+		-quality 100% -resize 750x -density 300 -compress lossless "$temprespdf"
 	if [ "$?" = "0" ]
 	then
 		if [ "$i" = "$start" ]
@@ -56,3 +66,4 @@ do
 done
 rmTemp
 echo "Result file is: $temppdf"
+evince $temppdf
