@@ -1,0 +1,251 @@
+#!/bin/sh
+
+#update domain=domain.com subdomain=test user=user pass=pass ip=127.0.0.1
+
+scriptdir=$(cd `dirname $0` && pwd && cd $OLDPWD)/
+
+tmp="$scriptdir"
+cookie="${tmp}cookie"
+header="${tmp}header"
+out="${tmp}out"
+log="${tmp}log"
+lockpath="${tmp}lockmydom"
+lockdircreated=0
+SUCCESS=0
+ERROR=1
+LOGIN_ERROR=2
+TOKEN_ERROR=3
+LOCK_ERROR=4
+RECORDS_ERROR=4
+UPDATE_ERROR=5
+
+escape()
+{
+	echo "$1" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/!/%21/g' -e 's/"/%22/g' -e 's/#/%23/g' -e 's/\$/%24/g' -e 's/\&/%26/g' -e 's/'\''/%27/g' -e 's/(/%28/g' -e 's/)/%29/g' -e 's/\*/%2a/g' -e 's/+/%2b/g' -e 's/,/%2c/g' -e 's/-/%2d/g' -e 's/\./%2e/g' -e 's/\//%2f/g' -e 's/:/%3a/g' -e 's/;/%3b/g' -e 's//%3e/g' -e 's/?/%3f/g' -e 's/@/%40/g' -e 's/\[/%5b/g' -e 's/\\/%5c/g' -e 's/\]/%5d/g' -e 's/\^/%5e/g' -e 's/_/%5f/g' -e 's/`/%60/g' -e 's/{/%7b/g' -e 's/|/%7c/g' -e 's/}/%7d/g' -e 's/~/%7e/g'
+
+}
+
+
+end()
+{
+	echo $1
+	if [ $lockdircreated = "1" ]
+	then
+		rmdir $lockpath
+	fi
+	if [ "x$2" != "x" ]
+	then
+		if [ $2 -eq 0 ]
+		then
+			rmold
+		elif [ $2 -eq $LOGIN_ERROR ]
+		then
+			rmcookie
+		elif [ $2 -eq $TOKEN_ERROR ]
+		then
+			rmcookie
+		fi
+		exit $2
+	fi
+	exit 1
+}
+
+rmcookie()
+{
+	rm $cookie
+}
+
+endIfNot()
+{
+	if [ "$1" != "$2" ]
+	then
+		end "$3 (exit status $2)" $4
+	fi
+}
+
+endIf()
+{
+	if [ "$1" = "$2" ]
+	then
+		end "$3 (exit status $2)" $4
+	fi
+}
+
+logged()
+{
+	grep yandex_login $cookie 2>/dev/null | grep -q $user
+	return $?
+}
+
+rmold()
+{
+	rm -f $header $out $log
+}
+
+login()
+{
+	rmold
+	logged
+	if [ $? -eq 0 ]
+	then
+		echo "Already logged."
+		return 0
+	fi
+	local code=`curl \
+	"http://passport.yandex.ru/passport?mode=auth" \
+	-s \
+	-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+	-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+	-H "Accept-Language: en-us,en;q=0.5" \
+	-H "Accept-Encoding: " \
+	-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+	-H "Referer: https://passport.yandex.ru/passport?mode=auth" \
+	-d from="passport" \
+	-d retpath=$(escape "https://passport.yandex.ru/passport?mode=passport") \
+	-d display="page" \
+	-d login=$(escape "$user") \
+	-d passwd=$(escape "$pass") \
+	-d timestamp=$(date +%s%N | cut -b1-13) \
+	-c $cookie \
+	-o $out \
+	-w '%{http_code}'`
+	logged
+	if [ $? -ne 0 ]
+	then
+		return 1
+	fi
+	return 0
+}
+gettocken()
+{
+	rmold
+	local code=`curl \
+	"https://pddimp.yandex.ru/get_token.xml?domain_name=$domain" \
+	-s \
+	-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+	-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+	-H "Accept-Language: en-us,en;q=0.5" \
+	-H "Accept-Encoding: " \
+	-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+	-b $cookie \
+	-c $cookie \
+	-D $header \
+	-o $out \
+	-w '%{http_code}'`
+	if [ $code != "200" ]
+	then
+		return 1
+	fi
+	token="`grep token $out | sed 's/.*token\=\"\([0-9a-z]\+\).*/\1/'`"
+	return $?
+}
+
+getrecords()
+{
+	rmold
+	local code=`curl \
+	"https://pddimp.yandex.ru/nsapi/get_domain_records.xml?domain_name=$domain&token=$token" \
+	-s \
+	-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+	-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+	-H "Accept-Language: en-us,en;q=0.5" \
+	-H "Accept-Encoding: " \
+	-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+	-b $cookie \
+	-c $cookie \
+	-D $header \
+	-o $out \
+	-w '%{http_code}'`
+	if [ $code != "200" ]
+	then
+		return 1
+	fi
+	record=`cat $out | grep domains | sed 's/.*\(<record[^>]*subdomain="'$subdomain'"[^>]*>[^<]*<\/record>\).*/\1/'`
+	domainid=`echo $record | sed 's/.*id="\([0-9]\+\)".*/\1/'`
+	domainip=`echo $record | sed 's/.*>\([^<]\+\)<\/record.*/\1/'`
+	if [ "x$domainid" = "x" ]
+	then
+		echo "Cannot get domain ID"
+		return 1
+	fi
+	if [ "x$domainip" = "x" ]
+	then
+		echo "Cannot get domain IP"
+		return 1
+	fi
+	return 0
+}
+
+updateip()
+{
+	if [ "$domainip" = "$ip" ]
+	then
+		end "Do not need update" $SUCCESS
+	fi
+	rmold
+	local code=`curl \
+	"https://pddimp.yandex.ru/nsapi/edit_a_record.xml?domain_name=$domain&token=$token&subdomain=$subdomain&record_id=$domainid&ttl=90&content=$ip" \
+	-s \
+	-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+	-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+	-H "Accept-Language: en-us,en;q=0.5" \
+	-H "Accept-Encoding: " \
+	-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+	-b $cookie \
+	-c $cookie \
+	-D $header \
+	-o $out \
+	-w '%{http_code}'`
+	if [ $code != "200" ]
+	then
+		return 1
+	fi
+	return 0
+}
+
+echo -n "Try to create directory-semaphore..."
+mkdir $lockpath
+endIfNot 0 $? "Cant create $lockpath. May be another instance of this script already running, or previous terminated without removing semaphore directory." $LOCK_ERROR
+lockdircreated=1
+echo "DONE"
+
+
+echo "Parse paramenters..."
+counter=1
+varpattern='\([^=]*\)\(=\(.*\)\)\{0,1\}'
+while [ "$counter" -le "$#" ]
+do
+	var=`eval echo '$'$counter`
+	varname=`echo $var | sed 's/'$varpattern'/\1/'`
+	if [ "$varname" != "$var" ]
+	then
+		varval=`echo $var | sed 's/'$varpattern'/\3/'`
+		eval $varname='$varval' 2>/dev/null
+	else
+		eval $var='1' 2>/dev/null
+	fi
+	counter=`expr $counter + 1`
+done
+echo "Done Parsing parameters"
+
+login
+
+endIfNot 0 $? "Cannot login." $LOGIN_ERROR
+
+echo "Logged."
+
+gettocken
+
+endIfNot 0 $? "Cannot get token." $TOKEN_ERROR
+endIf "" "$token" "Cannot get token." $TOKEN_ERROR
+
+getrecords
+
+endIfNot 0 $? "Cannot get records." $RECORDS_ERROR
+
+updateip
+
+endIfNot 0 $? "Cannot update." $UPDATE_ERROR
+
+
+end "Updated." $SUCCESS
