@@ -18,6 +18,8 @@ TOKEN_ERROR=3
 LOCK_ERROR=4
 RECORDS_ERROR=4
 UPDATE_ERROR=5
+echo="echo"
+dl="wget"
 
 escape()
 {
@@ -28,7 +30,7 @@ escape()
 
 end()
 {
-	echo $1
+	$echo $1
 	if [ $lockdircreated = "1" ]
 	then
 		rmdir $lockpath
@@ -88,27 +90,49 @@ login()
 	logged
 	if [ $? -eq 0 ]
 	then
-		echo "Already logged."
+		$echo "Already logged."
 		return 0
 	fi
-	local code=`curl \
-	"http://passport.yandex.ru/passport?mode=auth" \
-	-s \
-	-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
-	-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-	-H "Accept-Language: en-us,en;q=0.5" \
-	-H "Accept-Encoding: " \
-	-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
-	-H "Referer: https://passport.yandex.ru/passport?mode=auth" \
-	-d from="passport" \
-	-d retpath=$(escape "https://passport.yandex.ru/passport?mode=passport") \
-	-d display="page" \
-	-d login=$(escape "$user") \
-	-d passwd=$(escape "$pass") \
-	-d timestamp=$(date +%s%N | cut -b1-13) \
-	-c $cookie \
-	-o $out \
-	-w '%{http_code}'`
+	if [ $dl = "curl" ]
+	then
+		local code=`curl \
+		"http://passport.yandex.ru/passport?mode=auth" \
+		-s \
+		-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+		-H "Accept-Language: en-us,en;q=0.5" \
+		-H "Accept-Encoding: " \
+		-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+		-H "Referer: https://passport.yandex.ru/passport?mode=auth" \
+		-d from="passport" \
+		-d retpath=$(escape "https://passport.yandex.ru/passport?mode=passport") \
+		-d display="page" \
+		-d login=$(escape "$user") \
+		-d passwd=$(escape "$pass") \
+		-d timestamp=$(date +%s%N | cut -b1-13) \
+		-c $cookie \
+		-o $out`
+	elif [ $dl = "wget" ]
+	then
+		local res=`wget \
+		--header="User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+		--header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+		--header="Accept-Language: en-us,en;q=0.5" \
+		--header="Accept-Encoding: " \
+		--header="Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+		--header="Referer: https://passport.yandex.ru/passport?mode=auth" \
+		--post-data="from=passport&retpath=$(escape "https://passport.yandex.ru/passport?mode=passport")&display="page"&login=$(escape "$user")&passwd=$(escape "$pass")&timestamp=$(date +%s%N | cut -b1-13)" \
+		--save-cookies $cookie \
+		--keep-session-cookies \
+		--output-document=$out \
+		--output-file=$log \
+		--no-cache \
+		--no-verbose \
+		--no-check-certificate \
+		--save-headers \
+		"http://passport.yandex.ru/passport?mode=auth"`
+		local code=`cat $out | head -n1 | sed 's/.* \([0-9]\+\) .*/\1/'`
+	fi
 	logged
 	if [ $? -ne 0 ]
 	then
@@ -119,19 +143,41 @@ login()
 gettocken()
 {
 	rmold
-	local code=`curl \
-	"https://pddimp.yandex.ru/get_token.xml?domain_name=$domain" \
-	-s \
-	-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
-	-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-	-H "Accept-Language: en-us,en;q=0.5" \
-	-H "Accept-Encoding: " \
-	-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
-	-b $cookie \
-	-c $cookie \
-	-D $header \
-	-o $out \
-	-w '%{http_code}'`
+	if [ $dl = "curl" ]
+	then
+		local code=`curl \
+		"https://pddimp.yandex.ru/get_token.xml?domain_name=$domain" \
+		-s \
+		-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+		-H "Accept-Language: en-us,en;q=0.5" \
+		-H "Accept-Encoding: " \
+		-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+		-b $cookie \
+		-c $cookie \
+		-D $header \
+		-o $out \
+		-w '%{http_code}'`
+	elif [ $dl = "wget" ]
+	then
+		local res=`wget \
+		--header="User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+		--header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+		--header="Accept-Language: en-us,en;q=0.5" \
+		--header="Accept-Encoding: " \
+		--header="Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+		--save-cookies $cookie \
+		--load-cookies $cookie \
+		--keep-session-cookies \
+		--output-document=$out \
+		--output-file=$log \
+		--no-cache \
+		--no-verbose \
+		--no-check-certificate \
+		--save-headers \
+		"https://pddimp.yandex.ru/get_token.xml?domain_name=$domain"`
+		local code=`cat $out | head -n1 | sed 's/.* \([0-9]\+\) .*/\1/'`
+	fi
 	if [ $code != "200" ]
 	then
 		return 1
@@ -143,19 +189,41 @@ gettocken()
 getrecords()
 {
 	rmold
-	local code=`curl \
-	"https://pddimp.yandex.ru/nsapi/get_domain_records.xml?domain_name=$domain&token=$token" \
-	-s \
-	-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
-	-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-	-H "Accept-Language: en-us,en;q=0.5" \
-	-H "Accept-Encoding: " \
-	-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
-	-b $cookie \
-	-c $cookie \
-	-D $header \
-	-o $out \
-	-w '%{http_code}'`
+	if [ $dl = "curl" ]
+	then
+		local code=`curl \
+		"https://pddimp.yandex.ru/nsapi/get_domain_records.xml?domain_name=$domain&token=$token" \
+		-s \
+		-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+		-H "Accept-Language: en-us,en;q=0.5" \
+		-H "Accept-Encoding: " \
+		-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+		-b $cookie \
+		-c $cookie \
+		-D $header \
+		-o $out \
+		-w '%{http_code}'`
+	elif [ $dl = "wget" ]
+	then
+		local res=`wget \
+		--header="User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+		--header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+		--header="Accept-Language: en-us,en;q=0.5" \
+		--header="Accept-Encoding: " \
+		--header="Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+		--save-cookies $cookie \
+		--load-cookies $cookie \
+		--keep-session-cookies \
+		--output-document=$out \
+		--output-file=$log \
+		--no-cache \
+		--no-verbose \
+		--no-check-certificate \
+		--save-headers \
+		"https://pddimp.yandex.ru/nsapi/get_domain_records.xml?domain_name=$domain&token=$token"`
+		local code=`cat $out | head -n1 | sed 's/.* \([0-9]\+\) .*/\1/'`
+	fi
 	if [ $code != "200" ]
 	then
 		return 1
@@ -165,12 +233,12 @@ getrecords()
 	domainip=`echo $record | sed 's/.*>\([^<]\+\)<\/record.*/\1/'`
 	if [ "x$domainid" = "x" ]
 	then
-		echo "Cannot get domain ID"
+		$echo "Cannot get domain ID"
 		return 1
 	fi
 	if [ "x$domainip" = "x" ]
 	then
-		echo "Cannot get domain IP"
+		$echo "Cannot get domain IP"
 		return 1
 	fi
 	return 0
@@ -183,19 +251,41 @@ updateip()
 		end "Do not need update" $SUCCESS
 	fi
 	rmold
-	local code=`curl \
-	"https://pddimp.yandex.ru/nsapi/edit_a_record.xml?domain_name=$domain&token=$token&subdomain=$subdomain&record_id=$domainid&ttl=90&content=$ip" \
-	-s \
-	-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
-	-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-	-H "Accept-Language: en-us,en;q=0.5" \
-	-H "Accept-Encoding: " \
-	-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
-	-b $cookie \
-	-c $cookie \
-	-D $header \
-	-o $out \
-	-w '%{http_code}'`
+	if [ $dl = "curl" ]
+	then
+		local code=`curl \
+		"https://pddimp.yandex.ru/nsapi/edit_a_record.xml?domain_name=$domain&token=$token&subdomain=$subdomain&record_id=$domainid&ttl=90&content=$ip" \
+		-s \
+		-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+		-H "Accept-Language: en-us,en;q=0.5" \
+		-H "Accept-Encoding: " \
+		-H "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+		-b $cookie \
+		-c $cookie \
+		-D $header \
+		-o $out \
+		-w '%{http_code}'`
+	elif [ $dl = "wget" ]
+	then
+		local res=`wget \
+		--header="User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1" \
+		--header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+		--header="Accept-Language: en-us,en;q=0.5" \
+		--header="Accept-Encoding: " \
+		--header="Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" \
+		--save-cookies $cookie \
+		--load-cookies $cookie \
+		--keep-session-cookies \
+		--output-document=$out \
+		--output-file=$log \
+		--no-cache \
+		--no-verbose \
+		--no-check-certificate \
+		--save-headers \
+		"https://pddimp.yandex.ru/nsapi/edit_a_record.xml?domain_name=$domain&token=$token&subdomain=$subdomain&record_id=$domainid&ttl=90&content=$ip"`
+		local code=`cat $out | head -n1 | sed 's/.* \([0-9]\+\) .*/\1/'`
+	fi
 	if [ $code != "200" ]
 	then
 		return 1
@@ -203,14 +293,14 @@ updateip()
 	return 0
 }
 
-echo -n "Try to create directory-semaphore..."
+$echo "Try to create directory-semaphore..."
 mkdir $lockpath
 endIfNot 0 $? "Cant create $lockpath. May be another instance of this script already running, or previous terminated without removing semaphore directory." $LOCK_ERROR
 lockdircreated=1
-echo "DONE"
+$echo "DONE"
 
 
-echo "Parse paramenters..."
+$echo "Parse paramenters..."
 counter=1
 varpattern='\([^=]*\)\(=\(.*\)\)\{0,1\}'
 while [ "$counter" -le "$#" ]
@@ -226,13 +316,13 @@ do
 	fi
 	counter=`expr $counter + 1`
 done
-echo "Done Parsing parameters"
+$echo "Done Parsing parameters"
 
 login
 
 endIfNot 0 $? "Cannot login." $LOGIN_ERROR
 
-echo "Logged."
+$echo "Logged."
 
 gettocken
 
@@ -246,6 +336,5 @@ endIfNot 0 $? "Cannot get records." $RECORDS_ERROR
 updateip
 
 endIfNot 0 $? "Cannot update." $UPDATE_ERROR
-
 
 end "Updated." $SUCCESS
