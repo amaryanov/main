@@ -4,12 +4,12 @@
 
 scriptdir=$(cd `dirname $0` && pwd && cd $OLDPWD)/
 
-tmp="$scriptdir"
-cookie="${tmp}cookie"
-header="${tmp}header"
-out="${tmp}out"
-log="${tmp}log"
-lockpath="${tmp}lockmydom"
+tmp="/tmp/"
+cookie="${tmp}cookie-ydns"
+header="${tmp}header-ydns"
+out="${tmp}out-ydns"
+log="${tmp}log-ydns"
+lockpath="${tmp}lockmydom-ydns"
 lockdircreated=0
 SUCCESS=0
 ERROR=1
@@ -18,7 +18,7 @@ TOKEN_ERROR=3
 LOCK_ERROR=4
 RECORDS_ERROR=4
 UPDATE_ERROR=5
-echo="echo"
+echo="logger"
 dl="wget"
 
 escape()
